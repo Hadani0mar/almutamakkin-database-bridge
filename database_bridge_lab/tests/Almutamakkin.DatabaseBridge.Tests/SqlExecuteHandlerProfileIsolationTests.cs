@@ -84,6 +84,28 @@ public sealed class SqlExecuteHandlerProfileIsolationTests
     }
 
     [Fact]
+    public async Task HandleAsync_RoutesAnotherSystemUsingTheSelectedNetworkConnectionKind()
+    {
+        var executor = new RecordingExecutor();
+        var handler = CreateHandler(
+            new[]
+            {
+                Profile("Marketing", "Marketing", "local-sql"),
+                Profile("Marketing__remote", "Marketing", "remote-sql"),
+                Profile("InfinityRetailDB", "InfinityRetailDB", "local-sql"),
+                Profile("InfinityRetailDB__remote", "InfinityRetailDB", "remote-sql"),
+            },
+            executor,
+            activeProfileName: "Marketing__remote");
+
+        var response = await handler.HandleAsync(Command("InfinityRetailDB"), CancellationToken.None);
+
+        Assert.True(response.Success);
+        Assert.Equal("remote-sql", executor.Profile!.ServerName);
+        Assert.Equal("InfinityRetailDB", executor.Profile.DatabaseName);
+    }
+
+    [Fact]
     public async Task HandleAsync_RecoversFromStaleActiveSelectionUsingOnlyUniqueRequestedSystemProfile()
     {
         var executor = new RecordingExecutor();

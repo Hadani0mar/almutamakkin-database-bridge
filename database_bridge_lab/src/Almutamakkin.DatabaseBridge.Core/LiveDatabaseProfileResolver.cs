@@ -40,6 +40,20 @@ public sealed class LiveDatabaseProfileResolver : ILiveDatabaseProfileResolver
             .Where(profile => profile.IsEnabled)
             .ToList();
 
+        // The selected local/network connection is retained independently for
+        // each sales system.  A bridge may have both systems and both transport
+        // types configured at the same time, so the dashboard selection alone
+        // is not sufficient routing state.
+        var systemSelection = GetSystemSelection(requestedSystem);
+        var explicitlySelected = FindSingleProfile(
+            enabledProfiles,
+            systemSelection,
+            requestedSystem);
+        if (explicitlySelected is not null)
+        {
+            return explicitlySelected;
+        }
+
         // Prefer the operator-selected live profile when it belongs to the
         // requested sales system. A bridge can legitimately host both
         // Marketing and Infinity profiles, however, so a selected Marketing
@@ -59,6 +73,22 @@ public sealed class LiveDatabaseProfileResolver : ILiveDatabaseProfileResolver
                 string.Equals(GetSystem(active[0]), requestedSystem, StringComparison.Ordinal))
             {
                 return active[0];
+            }
+
+            if (active.Count == 1)
+            {
+                // Legacy settings have one global selection.  When it belongs
+                // to the other sales system, use only the requested-system
+                // profile with the same connection kind.  This preserves the
+                // operator's local-versus-network choice without falling back
+                // to the first enabled profile.
+                var sameConnectionKind = enabledProfiles
+                    .Where(profile => string.Equals(GetSystem(profile), requestedSystem, StringComparison.Ordinal))
+                    .Where(profile => profile.ConnectionKind == active[0].ConnectionKind)
+                    .Take(2)
+                    .ToList();
+
+                return sameConnectionKind.Count == 1 ? sameConnectionKind[0] : null;
             }
 
             // A second sales system is requested while another one is active,
@@ -87,6 +117,35 @@ public sealed class LiveDatabaseProfileResolver : ILiveDatabaseProfileResolver
             .ToList();
 
         return canonical.Count == 1 ? canonical[0] : null;
+    }
+
+    private string? GetSystemSelection(string system) => system switch
+    {
+        "marketing" => _settings.ActiveMarketingDatabaseProfileName?.Trim(),
+        "infinity" => _settings.ActiveInfinityDatabaseProfileName?.Trim(),
+        _ => null,
+    };
+
+    private DatabaseProfile? FindSingleProfile(
+        IReadOnlyCollection<DatabaseProfile> profiles,
+        string? profileName,
+        string requestedSystem)
+    {
+        if (string.IsNullOrWhiteSpace(profileName))
+        {
+            return null;
+        }
+
+        var matches = profiles
+            .Where(profile => string.Equals(
+                profile.ProfileName,
+                profileName,
+                StringComparison.OrdinalIgnoreCase))
+            .Where(profile => string.Equals(GetSystem(profile), requestedSystem, StringComparison.Ordinal))
+            .Take(2)
+            .ToList();
+
+        return matches.Count == 1 ? matches[0] : null;
     }
 
     public string? GetSystem(string? requestedProfileName)

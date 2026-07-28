@@ -1796,6 +1796,7 @@ public sealed class MainForm : Form
                 if (IsPharmacyDatabaseName(selection.DatabaseName))
                 {
                     selectedLiveProfileName ??= profileName;
+                    SetActiveProfileForSystem(selection.DatabaseName, profileName);
                 }
 
                 if (preserveLocalCanonicalProfiles &&
@@ -1890,6 +1891,7 @@ public sealed class MainForm : Form
         }
 
         _settings.ActiveDatabaseProfileName = match.ProfileName;
+        SetActiveProfileForSystem(match.DatabaseName, match.ProfileName);
         _settingsStore.Save(_settings);
         _dbProfileCombo.SelectedItem = match;
         UpdateActiveDbHint(match);
@@ -1900,6 +1902,18 @@ public sealed class MainForm : Form
     private static bool IsCanonicalAppProfile(string profileName) =>
         string.Equals(profileName, "Marketing", StringComparison.OrdinalIgnoreCase)
         || string.Equals(profileName, "InfinityRetailDB", StringComparison.OrdinalIgnoreCase);
+
+    private void SetActiveProfileForSystem(string databaseName, string profileName)
+    {
+        if (string.Equals(databaseName, "Marketing", StringComparison.OrdinalIgnoreCase))
+        {
+            _settings.ActiveMarketingDatabaseProfileName = profileName;
+        }
+        else if (string.Equals(databaseName, "InfinityRetailDB", StringComparison.OrdinalIgnoreCase))
+        {
+            _settings.ActiveInfinityDatabaseProfileName = profileName;
+        }
+    }
 
     private void RebindCanonicalProfile(string canonicalName, DatabaseProfile source)
     {
@@ -1999,6 +2013,7 @@ public sealed class MainForm : Form
             if (!string.Equals(_settings.ActiveDatabaseProfileName, selected.ProfileName, StringComparison.OrdinalIgnoreCase))
             {
                 _settings.ActiveDatabaseProfileName = selected.ProfileName;
+                SetActiveProfileForSystem(selected.DatabaseName, selected.ProfileName);
                 _settingsStore.Save(_settings);
             }
 

@@ -53,6 +53,21 @@ public sealed class AppSettings
     public string? ActiveDatabaseProfileName { get; set; }
 
     /// <summary>
+    /// Explicit live selection for Marketing.  This remains separate from the
+    /// display selection so a Marketing request can never inherit an Infinity
+    /// local/network profile (or vice versa).
+    /// </summary>
+    [JsonPropertyName("activeMarketingDatabaseProfileName")]
+    public string? ActiveMarketingDatabaseProfileName { get; set; }
+
+    /// <summary>
+    /// Explicit live selection for Infinity Retail.  The value is a profile
+    /// name only; credentials remain in the protected profile store.
+    /// </summary>
+    [JsonPropertyName("activeInfinityDatabaseProfileName")]
+    public string? ActiveInfinityDatabaseProfileName { get; set; }
+
+    /// <summary>
     /// Optional profile used only for cloud snapshot sync (must not overwrite local Marketing).
     /// </summary>
     [JsonPropertyName("snapshotMarketingProfileName")]
