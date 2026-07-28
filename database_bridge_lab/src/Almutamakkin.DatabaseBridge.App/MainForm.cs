@@ -160,7 +160,21 @@ public sealed class MainForm : Form
     private Form? _embeddedPrinterForm;
     private Almutamakkin.BarcodeBridge.Server.BridgeServerController? _printerServer;
     private Almutamakkin.BarcodeBridge.Logging.BridgeLogHub? _printerLogs;
-    private readonly RichTextBox _logsRichTextBox = new() { ReadOnly = true, Dock = DockStyle.Fill };
+    private readonly RichTextBox _logsRichTextBox = new()
+    {
+        ReadOnly = true,
+        Dock = DockStyle.Fill,
+        Font = new Font("Consolas", 10F),
+        BackColor = Color.White,
+    };
+    private readonly Label _logsHintLabel = new()
+    {
+        Text = "سجل الجسر الحي — انسخه أو صوّره عند حدوث خطأ.",
+        AutoSize = true,
+        ForeColor = UITheme.TextMuted,
+    };
+    private readonly Button _refreshLogsButton = new() { Text = "تحديث السجل", Width = 120, Height = 34 };
+    private readonly Button _copyLogsButton = new() { Text = "نسخ السجل", Width = 120, Height = 34 };
     private readonly ComboBox _dbProfileCombo = new() { DropDownStyle = ComboBoxStyle.DropDownList, Width = 300, Visible = false };
     private readonly ListBox _dbListBox = new()
     {
@@ -408,23 +422,11 @@ public sealed class MainForm : Form
             _updateButton,
         ]);
         var brandPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0, 0, 6, 0) };
-        var brandLogo = new PictureBox
-        {
-            Size = new Size(48, 48),
-            Location = new Point(166, 0),
-            SizeMode = PictureBoxSizeMode.Zoom,
-            BackColor = Color.Transparent,
-        };
-        brandLogo.Image = TryLoadBrandLogo(Path.Combine(
-            AppContext.BaseDirectory,
-            "assets",
-            "branding",
-            "almutamakkin_logo.png"));
         var brandTitle = new Label
         {
             Text = "المتمكن",
             AutoSize = true,
-            Location = new Point(76, 4),
+            Location = new Point(82, 4),
             Font = new Font("Segoe UI Variable Display", 15F, FontStyle.Bold),
             ForeColor = Color.White,
         };
@@ -436,7 +438,7 @@ public sealed class MainForm : Form
             Font = new Font("Segoe UI Variable Text", 8F, FontStyle.Bold),
             ForeColor = Color.FromArgb(139, 224, 214),
         };
-        brandPanel.Controls.AddRange([brandLogo, brandTitle, brandSubtitle]);
+        brandPanel.Controls.AddRange([brandTitle, brandSubtitle]);
         topNavLayout.Controls.Add(topNavActions, 0, 0);
         topNavLayout.Controls.Add(brandPanel, 1, 0);
         _topNavPanel.Controls.Add(topNavLayout);
@@ -596,7 +598,17 @@ public sealed class MainForm : Form
         _logsPanel.Padding = new Padding(24);
         var logsCardOuter = new Panel { Dock = DockStyle.Fill, Padding = new Padding(1), BackColor = UITheme.BorderColor };
         var logsCardInner = new Panel { Dock = DockStyle.Fill, Padding = new Padding(16), BackColor = UITheme.PanelColor };
+        var logsHeader = new FlowLayoutPanel
+        {
+            Dock = DockStyle.Top,
+            Height = 44,
+            FlowDirection = FlowDirection.RightToLeft,
+            WrapContents = false,
+            Padding = new Padding(0, 0, 0, 8),
+        };
+        logsHeader.Controls.AddRange([_copyLogsButton, _refreshLogsButton, _logsHintLabel]);
         logsCardInner.Controls.Add(_logsRichTextBox);
+        logsCardInner.Controls.Add(logsHeader);
         logsCardOuter.Controls.Add(logsCardInner);
         _logsPanel.Controls.Add(logsCardOuter);
 
@@ -641,30 +653,6 @@ public sealed class MainForm : Form
         }
     }
 
-    private static Image? TryLoadBrandLogo(string path)
-    {
-        try
-        {
-            if (!File.Exists(path))
-            {
-                return null;
-            }
-
-            using var stream = File.OpenRead(path);
-            using var source = Image.FromStream(
-                stream,
-                useEmbeddedColorManagement: true,
-                validateImageData: true);
-            return new Bitmap(source);
-        }
-        catch
-        {
-            // The logo is decorative only; return no image when the local
-            // graphics stack cannot decode it.
-            return null;
-        }
-    }
-
     private void OpenAvailableUpdatePage()
     {
         if (_availableUpdateUri is null)
@@ -695,6 +683,8 @@ public sealed class MainForm : Form
         _fetchDatabasesButton.Click += (_, _) => FetchDatabasesAsync();
         _remoteDatabaseButton.Click += (_, _) => ConnectRemoteDatabaseAsync();
         _openLogsButton.Click += (_, _) => OpenLogsFolder();
+        _refreshLogsButton.Click += (_, _) => PollLogs(forceFullReload: true);
+        _copyLogsButton.Click += (_, _) => CopyDisplayedLogs();
         _openTestConsoleButton.Click += (_, _) => OpenTestConsole();
         _profilesButton.Click += (_, _) => OpenProfiles();
         _transportCombo.SelectedIndexChanged += (_, _) => UpdateTransportModeFromUi();
@@ -760,6 +750,10 @@ public sealed class MainForm : Form
         _dashboardPanel.Visible = dashboard;
         _printerPanel.Visible = printer;
         _logsPanel.Visible = logs;
+        if (logs)
+        {
+            PollLogs(forceFullReload: true);
+        }
         if (printer)
         {
             EnsurePrinterHost();
@@ -852,7 +846,7 @@ public sealed class MainForm : Form
         previous?.Dispose();
     }
     
-    private void PollLogs()
+    private void PollLogs(bool forceFullReload = false)
     {
         try
         {
@@ -860,7 +854,7 @@ public sealed class MainForm : Form
             var expectedLogFile = Path.Combine(Almutamakkin.DatabaseBridge.Infrastructure.LabPaths.LogsDirectory, $"bridge-{dateStr}.log");
             if (!System.IO.File.Exists(expectedLogFile)) return;
             
-            if (_currentLogFile != expectedLogFile)
+            if (forceFullReload || _currentLogFile != expectedLogFile)
             {
                 _currentLogFile = expectedLogFile;
                 _lastLogPosition = 0;
@@ -883,6 +877,25 @@ public sealed class MainForm : Form
             }
         }
         catch { /* ignore read errors */ }
+    }
+
+    private void CopyDisplayedLogs()
+    {
+        if (string.IsNullOrWhiteSpace(_logsRichTextBox.Text))
+        {
+            _lastErrorLabel.Text = "لا توجد سجلات معروضة لنسخها بعد.";
+            return;
+        }
+
+        try
+        {
+            Clipboard.SetText(_logsRichTextBox.Text);
+            _lastErrorLabel.Text = "تم نسخ سجل الجسر إلى الحافظة.";
+        }
+        catch (Exception exception)
+        {
+            _lastErrorLabel.Text = $"تعذر نسخ السجل: {exception.Message}";
+        }
     }
 
     private void RefreshLiveQueryActivity()

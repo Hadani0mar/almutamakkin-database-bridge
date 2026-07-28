@@ -24,9 +24,14 @@ internal static class Program
         }
         catch (Exception exception)
         {
-            var logPath = StartupFailureReporter.Write(exception);
+            var diagnostic = StartupFailureReporter.Format(exception);
+            var logPath = StartupFailureReporter.Write(diagnostic);
+            var copied = StartupFailureReporter.TryCopyToClipboard(diagnostic);
             MessageBox.Show(
-                $"تعذر بدء جسر المتمكن. تم حفظ تفاصيل الخطأ في:\n{logPath}",
+                $"تعذر بدء جسر المتمكن.\n\n{exception.GetType().Name}: {exception.Message}\n\n" +
+                (copied
+                    ? "تم نسخ التفاصيل الكاملة إلى الحافظة؛ الصقها وأرسلها للدعم."
+                    : $"تفاصيل الخطأ موجودة في: {logPath}"),
                 "جسر المتمكن",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
@@ -82,20 +87,34 @@ internal static class Program
 
 internal static class StartupFailureReporter
 {
-    public static string Write(Exception exception)
+    public static string Format(Exception exception) =>
+        $"[{DateTimeOffset.UtcNow:O}]\r\n{exception}\r\n\r\n";
+
+    public static string Write(string diagnostic)
     {
         try
         {
             var directory = LabPaths.EnsureLogsDirectory();
             var path = Path.Combine(directory, "startup-errors.log");
-            File.AppendAllText(
-                path,
-                $"[{DateTimeOffset.UtcNow:O}] {exception}\r\n\r\n");
+            File.AppendAllText(path, diagnostic);
             return path;
         }
         catch
         {
             return "تعذر إنشاء سجل محلي.";
+        }
+    }
+
+    public static bool TryCopyToClipboard(string diagnostic)
+    {
+        try
+        {
+            Clipboard.SetText(diagnostic);
+            return true;
+        }
+        catch
+        {
+            return false;
         }
     }
 }
