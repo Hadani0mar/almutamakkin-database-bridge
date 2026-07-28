@@ -35,6 +35,9 @@ jobs:
           dotnet publish database_bridge_lab/src/Almutamakkin.DatabaseBridge.App/Almutamakkin.DatabaseBridge.App.csproj
           -c Release -r win-x64 --self-contained true
           -p:Version=${{ steps.version.outputs.value }}
+          -p:AssemblyVersion=${{ steps.version.outputs.value }}.0
+          -p:FileVersion=${{ steps.version.outputs.value }}.0
+          -p:InformationalVersion=${{ steps.version.outputs.value }}
           -o database_bridge_lab/publish/win-x64
 
       - name: Install Inno Setup

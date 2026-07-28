@@ -22,6 +22,16 @@ public sealed class MainForm : Form
     private readonly BridgeHostService _bridgeHostService;
     private readonly GitHubReleaseUpdateChecker _updateChecker;
     private readonly IServiceProvider _serviceProvider;
+    private readonly Button _updateButton = new()
+    {
+        Text = "تحديث متاح",
+        Width = 124,
+        Height = 40,
+        Visible = false,
+        BackColor = Color.FromArgb(12, 144, 128),
+        ForeColor = Color.White,
+        FlatStyle = FlatStyle.Flat,
+    };
     private readonly NotifyIcon _updateNotifyIcon = new()
     {
         Icon = SystemIcons.Information,
@@ -206,6 +216,7 @@ public sealed class MainForm : Form
     private ICommandTransport? _activeTransport;
     private bool _bridgeRunning;
     private string? _lastDatabaseTestSummary;
+    private Uri? _availableUpdateUri;
 
     public MainForm(
         AppSettings settings,
@@ -262,6 +273,9 @@ public sealed class MainForm : Form
                 return;
             }
 
+            _availableUpdateUri = update.ReleasePageUri;
+            _updateButton.Text = $"تحديث {update.Version}";
+            _updateButton.Visible = true;
             _updateNotifyIcon.BalloonTipTitle = "تحديث جديد لجسر المتمكن";
             _updateNotifyIcon.BalloonTipText = $"الإصدار {update.Version} متاح. اضغط هنا لفتح صفحة التنزيل.";
             _updateNotifyIcon.BalloonTipClicked += (_, _) =>
@@ -336,11 +350,11 @@ public sealed class MainForm : Form
         MinimumSize = new Size(820, 700);
         RightToLeft = RightToLeft.Yes;
         RightToLeftLayout = true;
-        var applicationIconPath = Path.Combine(AppContext.BaseDirectory, "assets", "branding", "almutamakkin.ico");
-        if (File.Exists(applicationIconPath))
-        {
-            Icon = new Icon(applicationIconPath);
-        }
+        Icon = TryLoadApplicationIcon(Path.Combine(
+            AppContext.BaseDirectory,
+            "assets",
+            "branding",
+            "almutamakkin.ico")) ?? SystemIcons.Application;
 
         _transportCombo.Items.AddRange(new object[] { "Local Test", "WebSocket", "Supabase Tunnel" });
         _transportCombo.SelectedIndex = 2;
@@ -391,6 +405,7 @@ public sealed class MainForm : Form
             _navPrinterButton,
             _navLogsButton,
             _navRemoteDbButton,
+            _updateButton,
         ]);
         var brandPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0, 0, 6, 0) };
         var brandLogo = new PictureBox
@@ -400,11 +415,11 @@ public sealed class MainForm : Form
             SizeMode = PictureBoxSizeMode.Zoom,
             BackColor = Color.Transparent,
         };
-        var brandLogoPath = Path.Combine(AppContext.BaseDirectory, "assets", "branding", "almutamakkin_logo.png");
-        if (File.Exists(brandLogoPath))
-        {
-            brandLogo.Image = Image.FromStream(new MemoryStream(File.ReadAllBytes(brandLogoPath)));
-        }
+        brandLogo.Image = TryLoadBrandLogo(Path.Combine(
+            AppContext.BaseDirectory,
+            "assets",
+            "branding",
+            "almutamakkin_logo.png"));
         var brandTitle = new Label
         {
             Text = "المتمكن",
@@ -606,6 +621,70 @@ public sealed class MainForm : Form
         layout.Controls.Add(valueControl, 1, row);
     }
 
+    private static Icon? TryLoadApplicationIcon(string path)
+    {
+        try
+        {
+            if (!File.Exists(path))
+            {
+                return null;
+            }
+
+            using var source = new Icon(path);
+            return (Icon)source.Clone();
+        }
+        catch
+        {
+            // Branding is optional. A damaged or unsupported icon must never
+            // prevent the bridge window from opening.
+            return null;
+        }
+    }
+
+    private static Image? TryLoadBrandLogo(string path)
+    {
+        try
+        {
+            if (!File.Exists(path))
+            {
+                return null;
+            }
+
+            using var stream = File.OpenRead(path);
+            using var source = Image.FromStream(
+                stream,
+                useEmbeddedColorManagement: true,
+                validateImageData: true);
+            return new Bitmap(source);
+        }
+        catch
+        {
+            // The logo is decorative only; return no image when the local
+            // graphics stack cannot decode it.
+            return null;
+        }
+    }
+
+    private void OpenAvailableUpdatePage()
+    {
+        if (_availableUpdateUri is null)
+        {
+            return;
+        }
+
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(_availableUpdateUri.AbsoluteUri)
+            {
+                UseShellExecute = true,
+            });
+        }
+        catch
+        {
+            _lastErrorLabel.Text = "تعذر فتح صفحة التحديث. تحقق من اتصال الإنترنت.";
+        }
+    }
+
     private void WireEvents()
     {
         _startButton.Click += async (_, _) => await StartBridgeAsync();
@@ -630,6 +709,7 @@ public sealed class MainForm : Form
         _navPrinterButton.Click += (_, _) => ShowSection(printer: true);
         _navLogsButton.Click += (_, _) => ShowSection(logs: true);
         _navRemoteDbButton.Click += (_, _) => ConnectRemoteDatabaseAsync();
+        _updateButton.Click += (_, _) => OpenAvailableUpdatePage();
         _navSyncSnapshotsButton.Click += async (_, _) => await SyncSnapshotsAsync();
         _testDebtNotificationButton.Click += async (_, _) =>
             await ForcePublishNotificationSnapshotsAsync();

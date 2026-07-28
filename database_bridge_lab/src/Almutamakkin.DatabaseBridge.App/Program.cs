@@ -11,14 +11,26 @@ internal static class Program
     [STAThread]
     private static void Main()
     {
-        ApplicationConfiguration.Initialize();
+        try
+        {
+            ApplicationConfiguration.Initialize();
 
-        using var host = Host.CreateDefaultBuilder()
-            .ConfigureServices(ConfigureServices)
-            .Build();
+            using var host = Host.CreateDefaultBuilder()
+                .ConfigureServices(ConfigureServices)
+                .Build();
 
-        var mainForm = host.Services.GetRequiredService<MainForm>();
-        Application.Run(mainForm);
+            var mainForm = host.Services.GetRequiredService<MainForm>();
+            Application.Run(mainForm);
+        }
+        catch (Exception exception)
+        {
+            var logPath = StartupFailureReporter.Write(exception);
+            MessageBox.Show(
+                $"تعذر بدء جسر المتمكن. تم حفظ تفاصيل الخطأ في:\n{logPath}",
+                "جسر المتمكن",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+        }
     }
 
     private static void ConfigureServices(IServiceCollection services)
@@ -65,5 +77,25 @@ internal static class Program
         services.AddTransient<MainForm>();
         services.AddTransient<DatabaseProfilesForm>();
         services.AddTransient<TestConsoleForm>();
+    }
+}
+
+internal static class StartupFailureReporter
+{
+    public static string Write(Exception exception)
+    {
+        try
+        {
+            var directory = LabPaths.EnsureLogsDirectory();
+            var path = Path.Combine(directory, "startup-errors.log");
+            File.AppendAllText(
+                path,
+                $"[{DateTimeOffset.UtcNow:O}] {exception}\r\n\r\n");
+            return path;
+        }
+        catch
+        {
+            return "تعذر إنشاء سجل محلي.";
+        }
     }
 }
