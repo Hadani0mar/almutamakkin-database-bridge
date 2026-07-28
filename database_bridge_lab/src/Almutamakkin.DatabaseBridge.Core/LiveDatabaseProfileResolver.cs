@@ -55,18 +55,17 @@ public sealed class LiveDatabaseProfileResolver : ILiveDatabaseProfileResolver
                 .Take(2)
                 .ToList();
 
-            if (active.Count != 1)
-            {
-                return null;
-            }
-
-            if (string.Equals(GetSystem(active[0]), requestedSystem, StringComparison.Ordinal))
+            if (active.Count == 1 &&
+                string.Equals(GetSystem(active[0]), requestedSystem, StringComparison.Ordinal))
             {
                 return active[0];
             }
 
-            // A second sales system is requested while another one is active.
-            // Resolve only an unambiguous enabled profile of that system.
+            // A second sales system is requested while another one is active,
+            // or the persisted active selection refers to a profile that has
+            // since been renamed/removed. Resolve only an unambiguous enabled
+            // profile of the requested system. This is never a cross-system or
+            // "first enabled profile" fallback.
             var systemProfile = enabledProfiles
                 .Where(profile => string.Equals(GetSystem(profile), requestedSystem, StringComparison.Ordinal))
                 .Take(2)

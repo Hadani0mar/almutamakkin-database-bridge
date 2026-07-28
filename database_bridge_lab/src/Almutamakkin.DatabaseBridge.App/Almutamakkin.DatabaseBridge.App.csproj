@@ -20,5 +20,9 @@
     <AssemblyName>Almutamakkin.DatabaseBridgeLab</AssemblyName>
     <RootNamespace>Almutamakkin.DatabaseBridge.App</RootNamespace>
     <Version>1.0.15</Version>
+    <ApplicationIcon>assets\branding\almutamakkin.ico</ApplicationIcon>
   </PropertyGroup>
+  <ItemGroup>
+    <Content Include="assets\branding\**\*" CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
 </Project>

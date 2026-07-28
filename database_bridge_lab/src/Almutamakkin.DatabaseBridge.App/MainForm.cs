@@ -336,6 +336,11 @@ public sealed class MainForm : Form
         MinimumSize = new Size(820, 700);
         RightToLeft = RightToLeft.Yes;
         RightToLeftLayout = true;
+        var applicationIconPath = Path.Combine(AppContext.BaseDirectory, "assets", "branding", "almutamakkin.ico");
+        if (File.Exists(applicationIconPath))
+        {
+            Icon = new Icon(applicationIconPath);
+        }
 
         _transportCombo.Items.AddRange(new object[] { "Local Test", "WebSocket", "Supabase Tunnel" });
         _transportCombo.SelectedIndex = 2;
@@ -359,8 +364,19 @@ public sealed class MainForm : Form
         _testDebtNotificationButton.Text = "اختبار إشعار دين";
         _testShiftCloseNotificationButton.Text = "اختبار إغلاق وردية";
 
-        _topNavPanel.Padding = new Padding(16, 8, 16, 8);
-        _topNavPanel.Height = 64;
+        _topNavPanel.Padding = new Padding(20, 10, 20, 10);
+        _topNavPanel.Height = 78;
+        _topNavPanel.BackColor = Color.FromArgb(14, 31, 68);
+        var topNavLayout = new TableLayoutPanel
+        {
+            Dock = DockStyle.Fill,
+            ColumnCount = 2,
+            BackColor = Color.Transparent,
+            Margin = Padding.Empty,
+            Padding = Padding.Empty,
+        };
+        topNavLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Percent, 100));
+        topNavLayout.ColumnStyles.Add(new ColumnStyle(SizeType.Absolute, 220));
         var topNavActions = new FlowLayoutPanel
         {
             Dock = DockStyle.Fill,
@@ -375,11 +391,40 @@ public sealed class MainForm : Form
             _navPrinterButton,
             _navLogsButton,
             _navRemoteDbButton,
-            _navSyncSnapshotsButton,
-            _testDebtNotificationButton,
-            _testShiftCloseNotificationButton,
         ]);
-        _topNavPanel.Controls.Add(topNavActions);
+        var brandPanel = new Panel { Dock = DockStyle.Fill, Padding = new Padding(0, 0, 6, 0) };
+        var brandLogo = new PictureBox
+        {
+            Size = new Size(48, 48),
+            Location = new Point(166, 0),
+            SizeMode = PictureBoxSizeMode.Zoom,
+            BackColor = Color.Transparent,
+        };
+        var brandLogoPath = Path.Combine(AppContext.BaseDirectory, "assets", "branding", "almutamakkin_logo.png");
+        if (File.Exists(brandLogoPath))
+        {
+            brandLogo.Image = Image.FromStream(new MemoryStream(File.ReadAllBytes(brandLogoPath)));
+        }
+        var brandTitle = new Label
+        {
+            Text = "المتمكن",
+            AutoSize = true,
+            Location = new Point(76, 4),
+            Font = new Font("Segoe UI Variable Display", 15F, FontStyle.Bold),
+            ForeColor = Color.White,
+        };
+        var brandSubtitle = new Label
+        {
+            Text = "DATABASE BRIDGE",
+            AutoSize = true,
+            Location = new Point(2, 31),
+            Font = new Font("Segoe UI Variable Text", 8F, FontStyle.Bold),
+            ForeColor = Color.FromArgb(139, 224, 214),
+        };
+        brandPanel.Controls.AddRange([brandLogo, brandTitle, brandSubtitle]);
+        topNavLayout.Controls.Add(topNavActions, 0, 0);
+        topNavLayout.Controls.Add(brandPanel, 1, 0);
+        _topNavPanel.Controls.Add(topNavLayout);
 
         _dashboardPanel.Padding = new Padding(24);
         var outerCard = new Panel { Dock = DockStyle.Fill, Padding = new Padding(1) };

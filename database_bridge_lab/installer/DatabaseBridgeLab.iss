@@ -41,6 +41,7 @@ VersionInfoVersion={#MyAppVersion}.0
 VersionInfoCompany={#MyAppPublisher}
 VersionInfoProductName={#MyAppNameEn}
 SetupLogging=yes
+SetupIconFile=..\src\Almutamakkin.DatabaseBridge.App\assets\branding\almutamakkin.ico
 CloseApplications=yes
 RestartApplications=no
 MinVersion=10.0

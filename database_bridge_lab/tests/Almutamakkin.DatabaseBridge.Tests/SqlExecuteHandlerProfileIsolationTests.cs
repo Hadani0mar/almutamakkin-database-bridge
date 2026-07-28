@@ -84,6 +84,27 @@ public sealed class SqlExecuteHandlerProfileIsolationTests
     }
 
     [Fact]
+    public async Task HandleAsync_RecoversFromStaleActiveSelectionUsingOnlyUniqueRequestedSystemProfile()
+    {
+        var executor = new RecordingExecutor();
+        var handler = CreateHandler(
+            new[]
+            {
+                Profile("InfinityRetailDB", "InfinityRetailDB", "remote-sql"),
+                Profile("Marketing", "Marketing", "remote-sql"),
+            },
+            executor,
+            activeProfileName: "RemovedOrRenamedProfile");
+
+        var response = await handler.HandleAsync(Command("InfinityRetailDB"), CancellationToken.None);
+
+        Assert.True(response.Success);
+        Assert.NotNull(executor.Profile);
+        Assert.Equal("InfinityRetailDB", executor.Profile!.DatabaseName);
+        Assert.Equal("remote-sql", executor.Profile.ServerName);
+    }
+
+    [Fact]
     public async Task HandleAsync_AppliesCatalogOverrideEvenWhenCatalogIsUnknownToDiscovery()
     {
         var executor = new RecordingExecutor();
