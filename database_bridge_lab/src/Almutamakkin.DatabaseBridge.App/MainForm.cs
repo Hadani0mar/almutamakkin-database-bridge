@@ -681,7 +681,7 @@ public sealed class MainForm : Form
             var fileName = $"Almutamakkin-DatabaseBridgeLab-Setup-{update.Version}.exe";
             var destination = Path.Combine(
                 Path.GetTempPath(),
-                "Almutamakkin", 
+                "Almutamakkin",
                 "DatabaseBridgeUpdates",
                 fileName);
             await _updateChecker.DownloadInstallerAsync(update, destination, cancellation.Token);
