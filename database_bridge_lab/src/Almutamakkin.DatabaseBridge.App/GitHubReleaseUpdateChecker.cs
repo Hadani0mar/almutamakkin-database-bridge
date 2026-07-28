@@ -4,8 +4,9 @@ using System.Text.Json;
 namespace Almutamakkin.DatabaseBridge.App;
 
 /// <summary>
-/// Reads the latest public release metadata. It never downloads or installs an
-/// update; the desktop UI remains in control of that action.
+/// Reads the latest public release metadata and downloads only the installer
+/// asset selected by the release workflow. The desktop UI remains in control
+/// of launching the downloaded installer.
 /// </summary>
 public sealed class GitHubReleaseUpdateChecker
 {
@@ -26,10 +27,7 @@ public sealed class GitHubReleaseUpdateChecker
         request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
 
         using var response = await _httpClient.SendAsync(request, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
-        if (!response.IsSuccessStatusCode)
-        {
-            return null;
-        }
+        response.EnsureSuccessStatusCode();
 
         await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
         using var document = await JsonDocument.ParseAsync(stream, cancellationToken: cancellationToken);
@@ -42,7 +40,86 @@ public sealed class GitHubReleaseUpdateChecker
             return null;
         }
 
-        return new GitHubReleaseUpdate(latestVersion, new Uri(pageUrl));
+        var installerUrl = FindInstallerUrl(root);
+        return new GitHubReleaseUpdate(
+            latestVersion,
+            new Uri(pageUrl),
+            installerUrl is null ? null : new Uri(installerUrl));
+    }
+
+    public async Task DownloadInstallerAsync(
+        GitHubReleaseUpdate update,
+        string destinationPath,
+        CancellationToken cancellationToken)
+    {
+        ArgumentNullException.ThrowIfNull(update);
+        ArgumentException.ThrowIfNullOrWhiteSpace(destinationPath);
+
+        if (update.InstallerUri is null)
+        {
+            throw new InvalidOperationException("ملف تثبيت التحديث غير متاح في الإصدار المنشور.");
+        }
+
+        var directory = Path.GetDirectoryName(destinationPath)
+            ?? throw new InvalidOperationException("مسار تنزيل التحديث غير صالح.");
+        Directory.CreateDirectory(directory);
+
+        var temporaryPath = destinationPath + ".downloading";
+        try
+        {
+            using var request = new HttpRequestMessage(HttpMethod.Get, update.InstallerUri);
+            request.Headers.UserAgent.Add(new ProductInfoHeaderValue("AlmutamakkinDatabaseBridge", update.Version.ToString()));
+            using var response = await _httpClient.SendAsync(
+                request,
+                HttpCompletionOption.ResponseHeadersRead,
+                cancellationToken);
+            response.EnsureSuccessStatusCode();
+
+            await using var input = await response.Content.ReadAsStreamAsync(cancellationToken);
+            await using var output = new FileStream(
+                temporaryPath,
+                FileMode.Create,
+                FileAccess.Write,
+                FileShare.None,
+                bufferSize: 81920,
+                useAsync: true);
+            await input.CopyToAsync(output, cancellationToken);
+            await output.FlushAsync(cancellationToken);
+
+            File.Move(temporaryPath, destinationPath, overwrite: true);
+        }
+        catch
+        {
+            if (File.Exists(temporaryPath))
+            {
+                File.Delete(temporaryPath);
+            }
+
+            throw;
+        }
+    }
+
+    private static string? FindInstallerUrl(JsonElement release)
+    {
+        if (!release.TryGetProperty("assets", out var assets) ||
+            assets.ValueKind != JsonValueKind.Array)
+        {
+            return null;
+        }
+
+        foreach (var asset in assets.EnumerateArray())
+        {
+            var name = asset.TryGetProperty("name", out var nameValue) ? nameValue.GetString() : null;
+            var url = asset.TryGetProperty("browser_download_url", out var urlValue) ? urlValue.GetString() : null;
+            if (!string.IsNullOrWhiteSpace(name) &&
+                name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) &&
+                !string.IsNullOrWhiteSpace(url))
+            {
+                return url;
+            }
+        }
+
+        return null;
     }
 
     internal static bool TryParseVersion(string? value, out Version version)
@@ -52,4 +129,4 @@ public sealed class GitHubReleaseUpdateChecker
     }
 }
 
-public sealed record GitHubReleaseUpdate(Version Version, Uri ReleasePageUri);
+public sealed record GitHubReleaseUpdate(Version Version, Uri ReleasePageUri, Uri? InstallerUri);

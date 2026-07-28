@@ -229,6 +229,7 @@ public sealed class MainForm : Form
 
     private ICommandTransport? _activeTransport;
     private bool _bridgeRunning;
+    private bool _updateInProgress;
     private string? _lastDatabaseTestSummary;
     private Uri _availableUpdateUri = GitHubReleaseUpdateChecker.ReleasesPageUri;
 
@@ -653,18 +654,53 @@ public sealed class MainForm : Form
         }
     }
 
-    private void OpenAvailableUpdatePage()
+    private async Task DownloadAndInstallUpdateAsync()
     {
+        if (_updateInProgress)
+        {
+            return;
+        }
+
+        _updateInProgress = true;
+        _updateButton.Enabled = false;
         try
         {
-            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(_availableUpdateUri.AbsoluteUri)
+            _updateButton.Text = "جار فحص التحديث...";
+            var installedVersion = typeof(MainForm).Assembly.GetName().Version ?? new Version(1, 0, 0);
+            using var cancellation = new CancellationTokenSource(TimeSpan.FromSeconds(90));
+            var update = await _updateChecker.GetLatestAsync(installedVersion, cancellation.Token);
+            if (update is null)
+            {
+                _updateButton.Text = "التحديثات";
+                MessageBox.Show(this, "التطبيق محدث ولا يوجد إصدار أحدث حالياً.", "التحديثات", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                return;
+            }
+
+            _availableUpdateUri = update.ReleasePageUri;
+            _updateButton.Text = "جار تنزيل التحديث...";
+            var fileName = $"Almutamakkin-DatabaseBridgeLab-Setup-{update.Version}.exe";
+            var destination = Path.Combine(
+                Path.GetTempPath(),
+                "Almutamakkin", 
+                "DatabaseBridgeUpdates",
+                fileName);
+            await _updateChecker.DownloadInstallerAsync(update, destination, cancellation.Token);
+
+            _updateButton.Text = "جار فتح المثبّت...";
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(destination)
             {
                 UseShellExecute = true,
             });
         }
-        catch
+        catch (Exception ex)
         {
-            _lastErrorLabel.Text = "تعذر فتح صفحة التحديث. تحقق من اتصال الإنترنت.";
+            _lastErrorLabel.Text = $"تعذر تنزيل التحديث: {ex.Message}";
+            MessageBox.Show(this, _lastErrorLabel.Text, "التحديثات", MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+        finally
+        {
+            _updateButton.Enabled = true;
+            _updateInProgress = false;
         }
     }
 
@@ -694,7 +730,7 @@ public sealed class MainForm : Form
         _navPrinterButton.Click += (_, _) => ShowSection(printer: true);
         _navLogsButton.Click += (_, _) => ShowSection(logs: true);
         _navRemoteDbButton.Click += (_, _) => ConnectRemoteDatabaseAsync();
-        _updateButton.Click += (_, _) => OpenAvailableUpdatePage();
+        _updateButton.Click += async (_, _) => await DownloadAndInstallUpdateAsync();
         _navSyncSnapshotsButton.Click += async (_, _) => await SyncSnapshotsAsync();
         _testDebtNotificationButton.Click += async (_, _) =>
             await ForcePublishNotificationSnapshotsAsync();
