@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="..\Almutamakkin.DatabaseBridge.Core\Almutamakkin.DatabaseBridge.Core.csproj" />
+    <ProjectReference Include="..\Almutamakkin.DatabaseBridge.Infrastructure\Almutamakkin.DatabaseBridge.Infrastructure.csproj" />
+    <ProjectReference Include="..\Almutamakkin.DatabaseBridge.Protocol\Almutamakkin.DatabaseBridge.Protocol.csproj" />
+    <ProjectReference Include="..\..\..\barcode_agent\src\Almutamakkin.BarcodeBridge\Almutamakkin.BarcodeBridge.csproj" />
+  </ItemGroup>
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Microsoft.Extensions.Hosting" Version="10.0.10" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="10.0.10" />
+    <PackageReference Include="QRCoder" Version="1.6.0" />
+  </ItemGroup>
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>Almutamakkin.DatabaseBridgeLab</AssemblyName>
+    <RootNamespace>Almutamakkin.DatabaseBridge.App</RootNamespace>
+    <Version>1.0.15</Version>
+  </PropertyGroup>
+</Project>

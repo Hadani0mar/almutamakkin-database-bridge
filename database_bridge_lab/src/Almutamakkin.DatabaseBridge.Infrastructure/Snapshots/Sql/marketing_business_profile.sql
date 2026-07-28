@@ -1,0 +1,8 @@
+SELECT TOP 1
+    LTRIM(RTRIM(ISNULL(A_NAME, N''))) AS business_name,
+    LTRIM(RTRIM(ISNULL(ACTIVITYName, N''))) AS activity_name,
+    LTRIM(RTRIM(ISNULL(A_ADDRESS, N''))) AS address,
+    LTRIM(RTRIM(ISNULL(CITY, N''))) AS city,
+    LTRIM(RTRIM(ISNULL(PHONE, N''))) AS phone
+FROM SITTEINGS
+;

@@ -1,0 +1,10 @@
+{
+  "protocolVersion": "1.0",
+  "messageType": "database.test",
+  "requestId": "REQ-20260720-000002",
+  "tunnelId": "LAB-TNL-001",
+  "sentAtUtc": "2026-07-20T18:00:00Z",
+  "payload": {
+    "databaseProfile": "BridgeLab"
+  }
+}

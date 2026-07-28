@@ -1,0 +1,15 @@
+{
+  "protocolVersion": "1.0",
+  "messageType": "bridge.health.response",
+  "requestId": "REQ-20260720-000001",
+  "tunnelId": "LAB-TNL-001",
+  "respondedAtUtc": "2026-07-20T18:00:00.100Z",
+  "success": true,
+  "payload": {
+    "status": "online",
+    "tunnelId": "LAB-TNL-001",
+    "transportMode": "LocalTest",
+    "activeQueries": 0,
+    "protocolVersion": "1.0"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "protocolVersion": "1.0",
+  "messageType": "sql.execute",
+  "requestId": "REQ-20260720-000003",
+  "tunnelId": "LAB-TNL-001",
+  "sentAtUtc": "2026-07-20T18:00:00Z",
+  "payload": {
+    "databaseProfile": "BridgeLab",
+    "sql": "SELECT TOP (@limit) Id, ItemName, Quantity FROM dbo.BridgeTestItems ORDER BY Id DESC",
+    "parameters": {
+      "limit": { "type": "int", "value": 10 }
+    },
+    "timeoutSeconds": 30,
+    "maxRows": 1000
+  }
+}

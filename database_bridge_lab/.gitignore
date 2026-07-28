@@ -1,0 +1,29 @@
+# Build outputs
+bin/
+obj/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Test / coverage artifacts
+artifacts/
+TestResults/
+coverage/
+*.trx
+
+# NuGet
+packages/
+
+# Local lab runtime data (optional copies)
+lab-data/
+
+# Secrets
+secrets.json
+*.secrets.json
+appsettings.Development.json
+
+# OS
+Thumbs.db
+Desktop.ini

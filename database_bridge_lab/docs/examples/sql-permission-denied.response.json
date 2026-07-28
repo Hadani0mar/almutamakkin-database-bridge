@@ -1,0 +1,13 @@
+{
+  "protocolVersion": "1.0",
+  "messageType": "sql.execute.response",
+  "requestId": "REQ-20260720-000003",
+  "tunnelId": "LAB-TNL-001",
+  "respondedAtUtc": "2026-07-20T18:00:01Z",
+  "success": false,
+  "error": {
+    "code": "SQL_PERMISSION_DENIED",
+    "message": "ملف الاتصال يسمح باستعلامات القراءة فقط.",
+    "retryable": false
+  }
+}

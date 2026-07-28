@@ -1,0 +1,38 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <UseSystemDrawing>true</UseSystemDrawing>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <SelfContained Condition="'$(RuntimeIdentifier)' != ''">true</SelfContained>
+    <PublishSingleFile Condition="'$(RuntimeIdentifier)' != ''">true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract Condition="'$(RuntimeIdentifier)' != ''">true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile Condition="'$(RuntimeIdentifier)' != ''">true</EnableCompressionInSingleFile>
+    <PublishTrimmed>false</PublishTrimmed>
+    <DebugType>embedded</DebugType>
+    <StartupObject>Almutamakkin.BarcodeBridge.Program</StartupObject>
+    <!-- System.Data.SqlClient is deliberate for the deployed SQL Server 2005 instance. -->
+    <NoWarn>$(NoWarn);CS0618</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="QRCoder" Version="1.6.0" />
+    <PackageReference Include="System.Data.SqlClient" Version="4.9.1" />
+    <PackageReference Include="System.Drawing.Common" Version="8.0.8" />
+    <PackageReference Include="System.Security.Cryptography.ProtectedData" Version="8.0.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="..\Almutamakkin.BarcodeAgent\Configuration\**\*.cs" Link="AgentCore\Configuration\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\Almutamakkin.BarcodeAgent\Database\**\*.cs" Link="AgentCore\Database\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\Almutamakkin.BarcodeAgent\Jobs\**\*.cs" Link="AgentCore\Jobs\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\Almutamakkin.BarcodeAgent\Models\**\*.cs" Link="AgentCore\Models\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\Almutamakkin.BarcodeAgent\Printing\**\*.cs" Link="AgentCore\Printing\%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="..\Almutamakkin.BarcodeAgent\Security\**\*.cs" Link="AgentCore\Security\%(RecursiveDir)%(Filename)%(Extension)" />
+  </ItemGroup>
+
+</Project>
