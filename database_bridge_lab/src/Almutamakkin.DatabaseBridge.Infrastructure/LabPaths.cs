@@ -40,6 +40,38 @@ public static class LabPaths
         return LocalAppDataRoot;
     }
 
+    /// <summary>
+    /// Removes all persisted pairing, connection-profile, and synchronization
+    /// state before a new bridge process starts.  The bridge deliberately
+    /// starts each process as a fresh operator session: it must be paired and
+    /// a database connection must be selected again.
+    /// </summary>
+    public static void ResetPersistedSessionState()
+    {
+        EnsureLocalAppDataRoot();
+
+        DeleteIfPresent(AppSettingsFilePath);
+        DeleteIfPresent(DatabaseProfilesFilePath);
+        DeleteIfPresent(SnapshotFingerprintsFilePath);
+        DeleteIfPresent(ChangeCursorsFilePath);
+
+        foreach (var backup in Directory.EnumerateFiles(
+                     LocalAppDataRoot,
+                     "change-cursors.corrupt-*.json",
+                     SearchOption.TopDirectoryOnly))
+        {
+            DeleteIfPresent(backup);
+        }
+    }
+
+    private static void DeleteIfPresent(string path)
+    {
+        if (File.Exists(path))
+        {
+            File.Delete(path);
+        }
+    }
+
     public static string EnsureLogsDirectory()
     {
         Directory.CreateDirectory(LogsDirectory);

@@ -11,6 +11,12 @@ public static class ServiceCollectionExtensions
     {
         ArgumentNullException.ThrowIfNull(services);
 
+        // Connection state is intentionally session-only.  Reset before any
+        // singleton reads settings or profiles so an installer upgrade, a
+        // restart, or a re-install can never reuse a previous tunnel or SQL
+        // connection selection.
+        LabPaths.ResetPersistedSessionState();
+
         var settingsStore = new AppSettingsStore();
         var settings = settingsStore.Load();
 

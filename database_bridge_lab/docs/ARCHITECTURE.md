@@ -86,3 +86,12 @@ Credentials persist in `%LocalAppData%\Almutamakkin\DatabaseBridgeLab\appsetting
 - `ReadOnly` is the default profile permission; `FullAccess` requires explicit confirmation in the UI.
 - `ReadOnly` allows session-local analysis batches (`CREATE`/`INSERT`/`DROP`/`SELECT INTO` on `#temp` / `##temp` / `@table` only) and still blocks permanent data or schema changes.
 - Prefer a dedicated SQL login with least privilege for lab testing (`AlmutamakkinBridgeLab` database).
+
+## Fresh session behavior
+
+The desktop bridge is intentionally stateless between launches. Before the
+dependency container loads settings or profiles, it deletes the persisted
+pairing, database-profile, snapshot-fingerprint, and change-cursor files under
+`%LocalAppData%\Almutamakkin\DatabaseBridgeLab`. Each start therefore requires
+a new pairing and a new local or network database selection. Diagnostic logs
+remain available separately for troubleshooting.
