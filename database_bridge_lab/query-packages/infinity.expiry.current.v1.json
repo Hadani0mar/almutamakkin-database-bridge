@@ -1,0 +1,10 @@
+{
+  "queryId": "infinity.expiry.current.v1",
+  "version": 1,
+  "system": "infinity",
+  "databaseProfile": "InfinityRetailDB",
+  "timeoutSeconds": 60,
+  "maxRows": 5000,
+  "parameters": [],
+  "sql": "SELECT\n    pi.ProductID_FK AS productId,\n    p.ProductCode AS productCode,\n    p.ProductName AS productName,\n    pi.ExpiryDate AS expiryDate,\n    SUM(pi.StockOnHand) AS quantity,\n    pi.BranchID_FK AS branchId,\n    MAX(br.BranchName) AS branchName,\n    u.UomID_FK AS uomId,\n    MAX(ISNULL(r.UOMName, N'وحدة أساسية')) AS unitName,\n    MAX(bar.ProductBarcode) AS barcode,\n    p.MainSupplierID_FK AS supplierId,\n    MAX(s.SupplierName) AS supplierName,\n    COUNT(pi.ProductInventoryID_PK) AS locationsCount\nFROM Inventory.Data_ProductInventories AS pi\nINNER JOIN Inventory.Data_Products AS p ON p.ProductID_PK = pi.ProductID_FK\nINNER JOIN MyCompany.Config_Branchs AS br ON br.BranchID_PK = pi.BranchID_FK\nINNER JOIN Inventory.Data_ProductUOMs AS u ON u.ProductID_FK = p.ProductID_PK AND u.UomID_FK = p.DefaultSellUomID_FK\nLEFT JOIN Inventory.RefUOMs AS r ON r.UOMID_PK = u.UomID_FK\nLEFT JOIN Purchase.Data_Suppliers AS s ON s.SupplierID_PK = p.MainSupplierID_FK\nOUTER APPLY (\n    SELECT TOP (1) pb.ProductBarcode\n    FROM Inventory.Data_ProductBarcodes AS pb\n    WHERE pb.ProductUOMID_FK = u.ProductUomID_PK\n    ORDER BY pb.ProductBarcode\n) AS bar\nWHERE pi.StockOnHand > 0\n  AND pi.ExpiryDate IS NOT NULL\n  AND p.IsInActive = 0\n  AND br.IsCurrentBranch = 1\n  AND pi.ExpiryDate < DATEADD(month, 1, DATEADD(month, DATEDIFF(month, 0, GETDATE()), 0))\nGROUP BY\n    pi.ProductID_FK, p.ProductCode, p.ProductName, pi.ExpiryDate, pi.BranchID_FK, u.UomID_FK, p.MainSupplierID_FK\nORDER BY pi.ExpiryDate ASC, p.ProductName ASC;"
+}

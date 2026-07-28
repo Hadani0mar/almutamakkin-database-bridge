@@ -14,7 +14,10 @@ namespace Almutamakkin.DatabaseBridge.Infrastructure;
 /// </summary>
 public sealed class SupabaseQueryPackageCatalogClient : IQueryPackageCatalogClient, IDisposable
 {
-    private static readonly TimeSpan CacheLifetime = TimeSpan.FromMinutes(5);
+    // A package is server-owned and may be changed without releasing a new
+    // bridge. Keep its SQL only in memory, but cap the stale window so a
+    // published correction reaches connected bridges promptly.
+    private static readonly TimeSpan MaximumCacheLifetime = TimeSpan.FromMinutes(1);
 
     private readonly AppSettings _settings;
     private readonly ISecretProtector _secretProtector;
@@ -73,7 +76,7 @@ public sealed class SupabaseQueryPackageCatalogClient : IQueryPackageCatalogClie
             return null;
         }
 
-        var ttl = Math.Clamp(payload!.CacheSeconds, 30, 900);
+        var ttl = Math.Clamp(payload!.CacheSeconds, 15, (int)MaximumCacheLifetime.TotalSeconds);
         _cache[queryId] = new CacheEntry(package, DateTime.UtcNow.AddSeconds(ttl));
         return package;
     }

@@ -16,5 +16,7 @@ if (File.Exists(privatePath))
 
 using var rsa = RSA.Create(3072);
 await File.WriteAllTextAsync(privatePath, rsa.ExportRSAPrivateKeyPem());
-Console.Write(rsa.ExportRSAPublicKeyPem());
+// SubjectPublicKeyInfo is understood by both .NET and WebCrypto.  The latter
+// verifies package signatures inside the secure publisher Edge Function.
+Console.Write(rsa.ExportSubjectPublicKeyInfoPem());
 return 0;

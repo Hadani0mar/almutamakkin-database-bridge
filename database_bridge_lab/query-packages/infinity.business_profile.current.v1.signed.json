@@ -1,0 +1,14 @@
+{
+  "definition": {
+    "QueryId": "infinity.business_profile.current.v1",
+    "Version": 1,
+    "System": "infinity",
+    "DatabaseProfile": "InfinityRetailDB",
+    "Sql": "SELECT TOP (1)\n    BranchID_PK AS branchId,\n    BranchName AS branchName,\n    BranchAddressLine1 AS branchAddressLine1,\n    BranchAddressLine2 AS branchAddressLine2,\n    BranchAddressLine3 AS branchAddressLine3,\n    BranchPhone AS phone,\n    BranchEmailAddress AS email\nFROM MyCompany.Config_Branchs\nWHERE IsCurrentBranch = 1\nORDER BY BranchID_PK;",
+    "Parameters": [],
+    "TimeoutSeconds": 15,
+    "MaxRows": 1
+  },
+  "keyId": "amkq-2026-07-28",
+  "signatureBase64": "VGXkYqaTlAYM9yK38keb4JnFbrZdO9OOMpe\u002BmCcKo0Kb6xNEXkRjZups7x7nTT9uVyPH\u002BGL3X\u002Bo229c5tPwoe5XPRP1Ijj6IGEhkmZ7fAc0Xe/QOE5khNEedEDVfbXxiMXR/5YO57xyoLfwY7\u002B8c14u8ztijdVnyjVmpltXs1NrSMuUQ5WRvo1ecfWklB19s4DqITfeLBL6N7/d3AXeUV0Z0xbD5DPnx84fXbTUedflx0aFBPvMs3B9L3x9KfzZh/lcw4tigag6egeMxalUZJDpCnkton/Eiqtu1SP\u002BNDkRGrIe2Iz\u002BFqwwdOhPbdom0C6ceyHtOBX3BCpjRdINAxCDs6hUES4vSQmbNLxxnfSCvAQ9Y3TapsY0cH9urjbWiVnNhRxFQb20h/3E5JVjv8XDGRCuco65YHXILdvQ3O2AT2tHocoCFs\u002B8SzhxGiVYI56Grddl/AdiUqtwLZD4iTnjBF72i2rGLJch1sAtTcBdCWADj4CD9bxzaw0bU7io1"
+}

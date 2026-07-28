@@ -7,7 +7,7 @@ namespace Almutamakkin.DatabaseBridge.Tests;
 public sealed class MarketingProductMovementHandlerIsolationTests
 {
     [Fact]
-    public async Task HandleAsync_UsesUniqueMarketingProfile_WhenInfinityIsTheActiveProfile()
+    public async Task HandleAsync_RejectsMarketingRequest_WhenInfinityIsTheActiveProfile()
     {
         var marketing = Profile("Marketing", "Marketing", "marketing-host");
         var infinity = Profile("InfinityRetailDB", "InfinityRetailDB", "infinity-host");
@@ -26,8 +26,9 @@ public sealed class MarketingProductMovementHandlerIsolationTests
 
         var response = await handler.HandleAsync(Command(), CancellationToken.None);
 
-        Assert.True(response.Success);
-        Assert.Equal("Marketing", executor.Profile?.DatabaseName);
+        Assert.False(response.Success);
+        Assert.Equal(ErrorCodes.DatabaseProfileNotFound, response.Error?.Code);
+        Assert.Null(executor.Profile);
     }
 
     private static DatabaseProfile Profile(string name, string database, string server) => new()

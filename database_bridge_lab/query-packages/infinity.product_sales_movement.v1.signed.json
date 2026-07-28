@@ -1,0 +1,40 @@
+{
+  "definition": {
+    "QueryId": "infinity.product_sales_movement.v1",
+    "Version": 2,
+    "System": "infinity",
+    "DatabaseProfile": "InfinityRetailDB",
+    "Sql": "WITH MatchedProducts AS (\n    SELECT DISTINCT barcode.ProductID_FK\n    FROM Inventory.Data_View_ProductUOMBarcodes AS barcode\n    WHERE @searchTerm \u003C\u003E N\u0027\u0027\n      AND barcode.ProductBarcode = @searchTerm\n\n    UNION\n\n    SELECT DISTINCT product.ProductID_PK\n    FROM Inventory.Data_Products AS product\n    WHERE product.ProductID_PK = @productId\n       OR (\n            @searchTerm \u003C\u003E N\u0027\u0027\n            AND (\n                product.ProductName LIKE N\u0027%\u0027 \u002B @searchTerm \u002B N\u0027%\u0027\n                OR product.ProductShortName LIKE N\u0027%\u0027 \u002B @searchTerm \u002B N\u0027%\u0027\n                OR product.ProductCode = @searchTerm\n            )\n       )\n), SourceMovements AS (\n    SELECT\n        CAST(invoice.SalesInvoiceDate AS date) AS SaleDate,\n        item.ProductID_FK AS ProductId,\n        item.ProductCode AS ProductCode,\n        item.ProductName AS ProductName,\n        item.QYT * item.UnitBaseQYT AS BaseQuantity,\n        item.SubTotal - ISNULL(item.DiscountAmount, 0) AS NetLineAmount,\n        ISNULL(item.DiscountAmount, 0) AS DiscountAmount,\n        invoice.SalesInvoiceID_PK AS SalesInvoiceId\n    FROM SALES.Data_View_SalesInvoiceItems AS item\n    INNER JOIN SALES.Data_View_SalesInvoices AS invoice\n        ON invoice.SalesInvoiceID_PK = item.SalesInvoiceID_FK\n    INNER JOIN MatchedProducts AS matched\n        ON matched.ProductID_FK = item.ProductID_FK\n    WHERE invoice.IsPosted = 1\n      AND invoice.SalesInvoiceDate \u003E= @startDate\n      AND invoice.SalesInvoiceDate \u003C DATEADD(day, 1, @endDate)\n), Bucketed AS (\n    SELECT\n        *,\n        CASE @granularity\n            WHEN N\u0027daily\u0027 THEN SaleDate\n            WHEN N\u0027weekly\u0027 THEN DATEADD(day, (DATEDIFF(day, @startDate, SaleDate) / 7) * 7, @startDate)\n            WHEN N\u0027monthly\u0027 THEN DATEFROMPARTS(YEAR(SaleDate), MONTH(SaleDate), 1)\n            WHEN N\u0027yearly\u0027 THEN DATEFROMPARTS(YEAR(SaleDate), 1, 1)\n        END AS PeriodStart,\n        CASE @granularity\n            WHEN N\u0027daily\u0027 THEN SaleDate\n            WHEN N\u0027weekly\u0027 THEN CASE\n                WHEN DATEADD(day, (DATEDIFF(day, @startDate, SaleDate) / 7) * 7 \u002B 6, @startDate) \u003E @endDate THEN @endDate\n                ELSE DATEADD(day, (DATEDIFF(day, @startDate, SaleDate) / 7) * 7 \u002B 6, @startDate)\n            END\n            WHEN N\u0027monthly\u0027 THEN CASE\n                WHEN EOMONTH(DATEFROMPARTS(YEAR(SaleDate), MONTH(SaleDate), 1)) \u003E @endDate THEN @endDate\n                ELSE EOMONTH(DATEFROMPARTS(YEAR(SaleDate), MONTH(SaleDate), 1))\n            END\n            WHEN N\u0027yearly\u0027 THEN CASE\n                WHEN DATEFROMPARTS(YEAR(SaleDate), 12, 31) \u003E @endDate THEN @endDate\n                ELSE DATEFROMPARTS(YEAR(SaleDate), 12, 31)\n            END\n        END AS PeriodEnd\n    FROM SourceMovements\n)\nSELECT\n    PeriodStart AS periodStart,\n    PeriodEnd AS periodEnd,\n    ProductId AS productId,\n    MAX(ProductCode) AS productCode,\n    MAX(ProductName) AS productName,\n    SUM(CASE WHEN BaseQuantity \u003E 0 THEN BaseQuantity ELSE 0 END) AS soldBaseQuantity,\n    ABS(SUM(CASE WHEN BaseQuantity \u003C 0 THEN BaseQuantity ELSE 0 END)) AS returnedBaseQuantity,\n    SUM(BaseQuantity) AS netBaseQuantity,\n    SUM(NetLineAmount) AS netAmount,\n    SUM(DiscountAmount) AS discountAmount,\n    COUNT(DISTINCT SalesInvoiceId) AS invoiceCount\nFROM Bucketed\nGROUP BY PeriodStart, PeriodEnd, ProductId\nHAVING SUM(BaseQuantity) \u003C\u003E 0 OR SUM(NetLineAmount) \u003C\u003E 0\nORDER BY PeriodStart DESC, productName;",
+    "Parameters": [
+      {
+        "Name": "productId",
+        "Type": "int",
+        "Required": true
+      },
+      {
+        "Name": "searchTerm",
+        "Type": "string",
+        "Required": true
+      },
+      {
+        "Name": "startDate",
+        "Type": "datetime",
+        "Required": true
+      },
+      {
+        "Name": "endDate",
+        "Type": "datetime",
+        "Required": true
+      },
+      {
+        "Name": "granularity",
+        "Type": "string",
+        "Required": true
+      }
+    ],
+    "TimeoutSeconds": 30,
+    "MaxRows": 2400
+  },
+  "keyId": "amkq-2026-07-28",
+  "signatureBase64": "WTj9fomdSI6Uo3XMfKrGwNSTIvu88u6mtjHpOH1G9Uy/e/P0\u002BcgSCmnIuhuCuSxnX/cN\u002BsdwVVvD/ew5Ndm/jdS\u002Bodh3BWsb5G2LWw1jdCunG6Knw5V\u002BMMNfE2OW5pSNQupXLfWOYX8nIpxTwvYh1fHupqSYU570MT1EBu0lRtPE2qKdF0hdXm\u002BXWkVWIH32jnwFypdyH7mMjaGCRHpWf7BnyTxK5qX9Dlhc5zUGMjJRl4p1O1ElwrYdyzAZdhAaafvXTMVoU4kljjjwcdIbuvd708cPb2M2meHD1FkQWaguxqBH0\u002BVwrEpC3wvKyTnc\u002Bi3Mi3rx0yDpO5r3YxTT7Vmvwd/fGYaTfZ1j178lfvRU3G\u002BdlMx1JBVzqj6SrwIk7cQfDUzPwKpUOkhSPiSi2carwumt7l88mLgmZOCknDBThS4\u002BBpCUTIcUgiB0Fflnz7Hj7gbPcDpbWVQAWaKp4s3jYQzS2rgrPiL/8D5i0O2hMBzY96WJpLDu/yVhrov4"
+}

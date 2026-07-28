@@ -88,6 +88,25 @@ public sealed class RequestValidatorTests
         Assert.False(result.IsValid);
     }
 
+    [Fact]
+    public void ValidateSqlExecutePayload_IntArray_FailsOutsideSignedPackages()
+    {
+        var payload = new SqlExecutePayload
+        {
+            DatabaseProfile = "BridgeLab",
+            Sql = "SELECT 1",
+            Parameters = new Dictionary<string, SqlParameterValue>
+            {
+                ["ids"] = new SqlParameterValue { Type = "int[]", Value = new[] { 1, 2 } },
+            },
+        };
+
+        var result = _validator.ValidateSqlExecutePayload(payload);
+
+        Assert.False(result.IsValid);
+        Assert.Equal(ErrorCodes.InvalidMessage, result.ErrorCode);
+    }
+
     private BridgeCommand CreateCommand(
         string protocolVersion,
         string messageType,

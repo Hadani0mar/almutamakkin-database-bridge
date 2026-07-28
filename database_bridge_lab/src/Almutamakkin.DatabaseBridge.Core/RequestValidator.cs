@@ -17,6 +17,7 @@ public sealed partial class RequestValidator : IRequestValidator
         "datetime",
         "guid",
         "null",
+        "int[]",
     };
 
     private readonly AppSettings _settings;
@@ -197,7 +198,7 @@ public sealed partial class RequestValidator : IRequestValidator
                     "اسم معامل حزمة الاستعلام غير صالح.");
             }
 
-            var parameterValidation = ValidateParameter(name, parameter);
+            var parameterValidation = ValidateParameter(name, parameter, allowIntArray: true);
             if (!parameterValidation.IsValid)
             {
                 return parameterValidation;
@@ -234,9 +235,14 @@ public sealed partial class RequestValidator : IRequestValidator
 
     public RequestValidationResult ValidateInfinityProductMovementPayload(InfinityProductMovementPayload payload)
     {
-        if (payload is null || payload.ProductId <= 0)
+        if (payload is null || (payload.ProductId <= 0 && string.IsNullOrWhiteSpace(payload.SearchTerm)))
         {
-            return RequestValidationResult.Failure(ErrorCodes.InvalidMessage, "رقم الصنف مطلوب.");
+            return RequestValidationResult.Failure(ErrorCodes.InvalidMessage, "ابحث بالباركود أو الاسم أو كود الصنف.");
+        }
+
+        if (!string.IsNullOrWhiteSpace(payload.SearchTerm) && payload.SearchTerm.Trim().Length > 150)
+        {
+            return RequestValidationResult.Failure(ErrorCodes.InvalidMessage, "عبارة البحث طويلة جداً.");
         }
 
         if (payload.StartDate == default || payload.EndDate == default || payload.EndDate < payload.StartDate)
@@ -360,7 +366,10 @@ public sealed partial class RequestValidator : IRequestValidator
         return RequestValidationResult.Success();
     }
 
-    private static RequestValidationResult ValidateParameter(string name, SqlParameterValue parameter)
+    private static RequestValidationResult ValidateParameter(
+        string name,
+        SqlParameterValue parameter,
+        bool allowIntArray = false)
     {
         if (parameter is null || string.IsNullOrWhiteSpace(parameter.Type))
         {
@@ -374,6 +383,22 @@ public sealed partial class RequestValidator : IRequestValidator
             return RequestValidationResult.Failure(
                 ErrorCodes.InvalidMessage,
                 $"نوع المعامل '{parameter.Type}' غير مدعوم.");
+        }
+
+        if (parameter.Type.Equals("int[]", StringComparison.OrdinalIgnoreCase))
+        {
+            if (!allowIntArray)
+            {
+                return RequestValidationResult.Failure(
+                    ErrorCodes.InvalidMessage,
+                    $"نوع المعامل '{parameter.Type}' مسموح لحزم الاستعلامات فقط.");
+            }
+
+            return SqlIntArrayParameter.TryRead(parameter.Value, out _, out var arrayError)
+                ? RequestValidationResult.Success()
+                : RequestValidationResult.Failure(
+                    ErrorCodes.InvalidMessage,
+                    arrayError ?? $"قيمة المعامل '{name}' يجب أن تكون قائمة أرقام صحيحة.");
         }
 
         if (parameter.Type.Equals("null", StringComparison.OrdinalIgnoreCase))

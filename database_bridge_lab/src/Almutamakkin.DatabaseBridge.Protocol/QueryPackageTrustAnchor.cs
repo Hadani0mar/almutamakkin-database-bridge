@@ -7,19 +7,19 @@ namespace Almutamakkin.DatabaseBridge.Protocol;
 /// </summary>
 public static class QueryPackageTrustAnchor
 {
-    public const string KeyId = "amkq-2026-07-27";
+    public const string KeyId = "amkq-2026-07-28";
 
     public const string PublicKeyPem = """
-        -----BEGIN RSA PUBLIC KEY-----
-        MIIBigKCAYEA23cQLBGk6b/SAofNSOVT+3CwbgvtZqd/bT2VpcluX0oZZYa1xJEL
-        fPxP6A4bsSwod1zuvjBe94A2huvW7B4eO/SXH6jEm60Ab0iCJRVlfY/LjPULDFXS
-        77/XN9AqnBf23097Kjumz0Hr8VQwFq+P48ZtqI5ovgG23/XUGzMfQ6JQ6QR8Pm/V
-        1B+S0wNFpw6mEWuwTPRElaplyoBrFAzh3ItFFbqAKoSv5reGxjRrTcvV7a3s3mNw
-        G2Yy/HzJz7ZCUQ7NQqRT9lX5fp9bkdtVpZoTo8Codlgxqww4FhutfO1WLOzpWUr/
-        pyo6ReUS7K+kCYOSIpsgeJks9jNiNPdKjxNlfFLNb8Iyo9nEPtriv1rAYkXHRYSh
-        ZA04bZMUN4JeYL/o0ZzLSGfqRM6ppwGhPnq8qbH5CNert9a2p/XYBC5P+Hs/ch4j
-        2d2Jhg7YfyBcH8e+4kYBNu8QZySp0MxBtNPocf7iAd/y93qJwRspIrq3LGQbHTK5
-        24lJ2Lk7QeI9AgMBAAE=
-        -----END RSA PUBLIC KEY-----
+        -----BEGIN PUBLIC KEY-----
+        MIIBojANBgkqhkiG9w0BAQEFAAOCAY8AMIIBigKCAYEAt0zqy2dv7mpvWqkpOzQm
+        HBnz3TU0Xe464ElIvUNdWllixmhfpBg5y6AjD30llPqbCETnaBtrYXNCBb5yI7HU
+        yKDC8u3HVxsJtucmYdX3s8wr5Igsr453cZgUBtceeIwHNH7cFok5XbzyZTjKw6dY
+        S3pyHDMEnwniCzz2nvUjVNc5abfikOHsTw+T7jUWB+c1uBi+LsZkANHAKmN0LZu3
+        1yQsNUjo68wv93bR5hU3q3YilI9mmGr77u4Aw9BSeUGoMME08T4ICaSITVEUqpGd
+        o3rU/BnVExkQjy9GSjkbLLLWrpcbLaGNkTzmkoHGTiGvoY07xhQzYFDBj5Ij5tjC
+        GYfOa105ixjXrXmExgk79d70PTtUmiX3xliNcDPOqzJwktQWd3t75Gj2F6r1qOXE
+        5orygtqeTqFnJNMXUITf0udHJddiwBqQBPZtLyPl+lzGZoFbijgqCDRWdoyI1VwV
+        o+UTT41u8M8SlGdO0DY7WzYlVdtm9OhC8S7WLZjiL+YdAgMBAAE=
+        -----END PUBLIC KEY-----
         """;
 }

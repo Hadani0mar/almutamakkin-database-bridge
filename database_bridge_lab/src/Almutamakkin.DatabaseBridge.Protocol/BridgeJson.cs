@@ -131,6 +131,15 @@ public sealed record InfinityProductMovementPayload
     [JsonPropertyName("productId")]
     public int ProductId { get; init; }
 
+    /// <summary>
+    /// Preferred product lookup for the legacy named contract. It follows the
+    /// Infinity product movement reference: exact barcode, exact product code,
+    /// or partial product/short name. ProductId remains only as a compatibility
+    /// fallback while older phones migrate to query.execute.
+    /// </summary>
+    [JsonPropertyName("searchTerm")]
+    public string? SearchTerm { get; init; }
+
     [JsonPropertyName("startDate")]
     public DateTime StartDate { get; init; }
 

@@ -1,0 +1,14 @@
+{
+  "definition": {
+    "QueryId": "infinity.expiry.current.v1",
+    "Version": 1,
+    "System": "infinity",
+    "DatabaseProfile": "InfinityRetailDB",
+    "Sql": "SELECT\n    pi.ProductID_FK AS productId,\n    p.ProductCode AS productCode,\n    p.ProductName AS productName,\n    pi.ExpiryDate AS expiryDate,\n    SUM(pi.StockOnHand) AS quantity,\n    pi.BranchID_FK AS branchId,\n    MAX(br.BranchName) AS branchName,\n    u.UomID_FK AS uomId,\n    MAX(ISNULL(r.UOMName, N\u0027\u0648\u062D\u062F\u0629 \u0623\u0633\u0627\u0633\u064A\u0629\u0027)) AS unitName,\n    MAX(bar.ProductBarcode) AS barcode,\n    p.MainSupplierID_FK AS supplierId,\n    MAX(s.SupplierName) AS supplierName,\n    COUNT(pi.ProductInventoryID_PK) AS locationsCount\nFROM Inventory.Data_ProductInventories AS pi\nINNER JOIN Inventory.Data_Products AS p ON p.ProductID_PK = pi.ProductID_FK\nINNER JOIN MyCompany.Config_Branchs AS br ON br.BranchID_PK = pi.BranchID_FK\nINNER JOIN Inventory.Data_ProductUOMs AS u ON u.ProductID_FK = p.ProductID_PK AND u.UomID_FK = p.DefaultSellUomID_FK\nLEFT JOIN Inventory.RefUOMs AS r ON r.UOMID_PK = u.UomID_FK\nLEFT JOIN Purchase.Data_Suppliers AS s ON s.SupplierID_PK = p.MainSupplierID_FK\nOUTER APPLY (\n    SELECT TOP (1) pb.ProductBarcode\n    FROM Inventory.Data_ProductBarcodes AS pb\n    WHERE pb.ProductUOMID_FK = u.ProductUomID_PK\n    ORDER BY pb.ProductBarcode\n) AS bar\nWHERE pi.StockOnHand \u003E 0\n  AND pi.ExpiryDate IS NOT NULL\n  AND p.IsInActive = 0\n  AND br.IsCurrentBranch = 1\n  AND pi.ExpiryDate \u003C DATEADD(month, 1, DATEADD(month, DATEDIFF(month, 0, GETDATE()), 0))\nGROUP BY\n    pi.ProductID_FK, p.ProductCode, p.ProductName, pi.ExpiryDate, pi.BranchID_FK, u.UomID_FK, p.MainSupplierID_FK\nORDER BY pi.ExpiryDate ASC, p.ProductName ASC;",
+    "Parameters": [],
+    "TimeoutSeconds": 60,
+    "MaxRows": 5000
+  },
+  "keyId": "amkq-2026-07-28",
+  "signatureBase64": "qXqAIu2wVbyo8OvvmYY/3RjRzJxPzitQEas7ahWRHdoKAloVwDO/mnq\u002Bc0yJcwppQbMKSrdPhxd1kaQl2V7Ds5UMTYmqSLQG4j33oQ/FDwc2qvdbyBqdLNrT7f1bpdfW\u002Brb8p3wPBxJ6br917R8F1SQi/As4YV81ja41PkA0NqoZQmwb7OBDqt2ABYrN71qtPoJpZ9dGh9agR1q1FXtTA25bA\u002BOyRnxckdgBbZxBvci83JyBGbEYhIXbNUjxdqJDrI0cckotTiJLAmRe653cuzCFViompo\u002BYjMDjlsTSVv6vf29rwQgopO6ip8rPb98BiE5Zqo1p2KRNttGfo768bSJtqXoehNM9Zuiyh5YwVxx8rM\u002BzZY/A5uWvibUWFKzESuNny\u002Bh6lntPHcYccPJrskFZLMDPrmaWl1/\u002BAE\u002BzBkPlbNn4uny4ks9IiLHpzm46G\u002BVm4AazUYlpdGEXWhZ4CLS\u002BG3uvWcVrsmi\u002B\u002Bo6aNkTU\u002BhWRcQ08I5u7WDAhrqbf"
+}

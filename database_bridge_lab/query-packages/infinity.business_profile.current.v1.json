@@ -1,0 +1,10 @@
+{
+  "queryId": "infinity.business_profile.current.v1",
+  "version": 1,
+  "system": "infinity",
+  "databaseProfile": "InfinityRetailDB",
+  "timeoutSeconds": 15,
+  "maxRows": 1,
+  "parameters": [],
+  "sql": "SELECT TOP (1)\n    BranchID_PK AS branchId,\n    BranchName AS branchName,\n    BranchAddressLine1 AS branchAddressLine1,\n    BranchAddressLine2 AS branchAddressLine2,\n    BranchAddressLine3 AS branchAddressLine3,\n    BranchPhone AS phone,\n    BranchEmailAddress AS email\nFROM MyCompany.Config_Branchs\nWHERE IsCurrentBranch = 1\nORDER BY BranchID_PK;"
+}

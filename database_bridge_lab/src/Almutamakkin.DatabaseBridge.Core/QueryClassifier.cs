@@ -117,6 +117,22 @@ public sealed partial class QueryClassifier : IQueryClassifier
     }
 
     /// <summary>
+    /// Signed query packages are intentionally narrower than a general
+    /// read-only connection: a stored procedure can change data even when its
+    /// call is placed after a SELECT. The package publisher and the bridge
+    /// therefore reject EXEC / EXECUTE altogether.
+    /// </summary>
+    public static bool ContainsStoredProcedureExecution(string sql)
+    {
+        if (string.IsNullOrWhiteSpace(sql))
+        {
+            return false;
+        }
+
+        return ExecuteKeywordRegex().IsMatch(MaskLiteralsAndComments(sql));
+    }
+
+    /// <summary>
     /// True when the SQL creates/alters/drops permanent schema objects.
     /// CREATE/DROP TABLE #temp (and ##temp) are excluded.
     /// </summary>
@@ -400,4 +416,9 @@ public sealed partial class QueryClassifier : IQueryClassifier
         @"\bDROP\s+TABLE\s+(?:IF\s+EXISTS\s+)?(?<t>\[[^\]]+\]|[^\s;()]+)",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
     private static partial Regex DropTableTargetRegex();
+
+    [GeneratedRegex(
+        @"\bEXEC(?:UTE)?\b",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant)]
+    private static partial Regex ExecuteKeywordRegex();
 }

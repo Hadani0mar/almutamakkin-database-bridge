@@ -7,7 +7,7 @@ namespace Almutamakkin.DatabaseBridge.Tests;
 public sealed class InfinityProductMovementHandlerIsolationTests
 {
     [Fact]
-    public async Task HandleAsync_UsesUniqueInfinityProfile_WhenMarketingIsTheActiveProfile()
+    public async Task HandleAsync_RejectsInfinityRequest_WhenMarketingIsTheActiveProfile()
     {
         var store = new InMemoryProfileStore(new[]
         {
@@ -28,8 +28,33 @@ public sealed class InfinityProductMovementHandlerIsolationTests
 
         var response = await handler.HandleAsync(Command(), CancellationToken.None);
 
+        Assert.False(response.Success);
+        Assert.Equal(ErrorCodes.DatabaseProfileNotFound, response.Error?.Code);
+        Assert.Null(executor.Profile);
+    }
+
+    [Fact]
+    public async Task HandleAsync_SearchTermUsesPostedViewsAndSeparatesReturns()
+    {
+        var store = new InMemoryProfileStore(new[] { Profile("InfinityRetailDB", "InfinityRetailDB") });
+        var executor = new RecordingExecutor();
+        var handler = new InfinityProductMovementHandler(
+            store,
+            new LiveDatabaseProfileResolver(store, new AppSettings { TunnelId = "test-tunnel" }),
+            executor,
+            new RequestValidator(new AppSettings { TunnelId = "test-tunnel" }),
+            new TestBridgeLogger());
+
+        var response = await handler.HandleAsync(SearchCommand(), CancellationToken.None);
+
         Assert.True(response.Success);
-        Assert.Equal("InfinityRetailDB", executor.Profile?.DatabaseName);
+        Assert.NotNull(executor.Request);
+        Assert.Contains("SALES.Data_View_SalesInvoiceItems", executor.Request!.Sql);
+        Assert.Contains("SALES.Data_View_SalesInvoices", executor.Request.Sql);
+        Assert.Contains("invoice.IsPosted = 1", executor.Request.Sql);
+        Assert.Contains("returnedBaseQuantity", executor.Request.Sql);
+        Assert.Contains("item.QYT * item.UnitBaseQYT", executor.Request.Sql);
+        Assert.Equal("8411047108659", executor.Request.Parameters["searchTerm"].Value);
     }
 
     private static DatabaseProfile Profile(string name, string database) => new()
@@ -60,6 +85,22 @@ public sealed class InfinityProductMovementHandlerIsolationTests
         };
     }
 
+    private static BridgeCommand SearchCommand()
+    {
+        using var document = JsonDocument.Parse("""
+            { "searchTerm": "8411047108659", "startDate": "2026-06-01", "endDate": "2026-06-30", "granularity": "daily" }
+            """);
+        return new BridgeCommand
+        {
+            ProtocolVersion = BridgeLimits.SupportedProtocolVersion,
+            MessageType = MessageTypes.InfinityProductMovement,
+            RequestId = "REQ-INFINITY-MOVEMENT-SEARCH-001",
+            TunnelId = "test-tunnel",
+            SentAtUtc = DateTime.UtcNow,
+            Payload = document.RootElement.Clone(),
+        };
+    }
+
     private sealed class InMemoryProfileStore : IDatabaseProfileStore
     {
         private readonly IReadOnlyList<DatabaseProfile> _profiles;
@@ -75,9 +116,11 @@ public sealed class InfinityProductMovementHandlerIsolationTests
     private sealed class RecordingExecutor : ISqlCommandExecutor
     {
         public DatabaseProfile? Profile { get; private set; }
+        public SqlExecutePayload? Request { get; private set; }
         public Task<SqlExecutionResult> ExecuteAsync(DatabaseProfile profile, SqlExecutePayload request, CancellationToken cancellationToken)
         {
             Profile = profile;
+            Request = request;
             return Task.FromResult(new SqlExecutionResult { Success = true });
         }
     }

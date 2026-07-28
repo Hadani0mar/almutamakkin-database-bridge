@@ -14,4 +14,5 @@ public static class BridgeLimits
     public const int MaximumConcurrentQueries = 2;
     public const int MaximumResponseSizeMb = 32;
     public const int ProcessedRequestRetentionHours = 24;
+    public const int MaximumIntArrayParameterItems = 500;
 }

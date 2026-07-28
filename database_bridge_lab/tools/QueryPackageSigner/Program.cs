@@ -2,15 +2,16 @@ using System.Security.Cryptography;
 using System.Text.Json;
 using Almutamakkin.DatabaseBridge.Core;
 
-if (args.Length != 3)
+if (args.Length is < 3 or > 4)
 {
-    Console.Error.WriteLine("Usage: QueryPackageSigner <private-key.pem> <package-definition.json> <signed-package.json>");
+    Console.Error.WriteLine("Usage: QueryPackageSigner <private-key.pem> <package-definition.json> <signed-package.json> [key-id]");
     return 2;
 }
 
 var privateKeyPath = Path.GetFullPath(args[0]);
 var inputPath = Path.GetFullPath(args[1]);
 var outputPath = Path.GetFullPath(args[2]);
+var keyId = args.Length == 4 ? args[3].Trim() : "amkq-2026-07-28";
 if (!File.Exists(privateKeyPath) || !File.Exists(inputPath))
 {
     Console.Error.WriteLine("Private key or package definition file is missing.");
@@ -36,7 +37,7 @@ var signature = rsa.SignData(
 var result = new
 {
     definition,
-    keyId = "amkq-2026-07-27",
+    keyId,
     signatureBase64 = Convert.ToBase64String(signature),
 };
 Directory.CreateDirectory(Path.GetDirectoryName(outputPath)!);

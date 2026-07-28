@@ -59,7 +59,25 @@ public sealed class QueryPackageExecuteHandler : ICommandHandler
             return BridgeResponseBuilder.FromValidation(command, validation);
         }
 
-        var package = await _catalogClient.GetAsync(payload!.QueryId, cancellationToken).ConfigureAwait(false);
+        SignedQueryPackage? package;
+        try
+        {
+            package = await _catalogClient.GetAsync(payload!.QueryId, cancellationToken).ConfigureAwait(false);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.Error($"Unable to retrieve signed query package '{payload!.QueryId}'.", ex);
+            return BridgeResponseBuilder.Failure(
+                command,
+                ErrorCodes.BridgeOffline,
+                "تعذر الوصول إلى كتالوج حزم الاستعلامات. أعد المحاولة بعد التحقق من اتصال الجسر.",
+                retryable: true);
+        }
+
         if (package is null)
         {
             return BridgeResponseBuilder.Failure(command, ErrorCodes.InvalidMessage, "حزمة الاستعلام غير موجودة أو غير مفعّلة.");
@@ -100,14 +118,23 @@ public sealed class QueryPackageExecuteHandler : ICommandHandler
                 "لا يوجد اتصال نشط يطابق نظام حزمة الاستعلام.");
         }
 
-        var sqlRequest = new SqlExecutePayload
+        SqlExecutePayload sqlRequest;
+        try
         {
-            DatabaseProfile = package.Definition.DatabaseProfile,
-            Sql = package.Definition.Sql,
-            Parameters = payload.Parameters,
-            TimeoutSeconds = package.Definition.TimeoutSeconds,
-            MaxRows = package.Definition.MaxRows,
-        };
+            sqlRequest = SqlIntArrayParameter.Expand(new SqlExecutePayload
+            {
+                DatabaseProfile = package.Definition.DatabaseProfile,
+                Sql = package.Definition.Sql,
+                Parameters = payload.Parameters,
+                TimeoutSeconds = package.Definition.TimeoutSeconds,
+                MaxRows = package.Definition.MaxRows,
+            });
+        }
+        catch (ArgumentException ex)
+        {
+            return BridgeResponseBuilder.Failure(command, ErrorCodes.InvalidMessage, ex.Message);
+        }
+
         var sqlValidation = _validator.ValidateSqlExecutePayload(sqlRequest);
         if (!sqlValidation.IsValid)
         {
@@ -115,7 +142,7 @@ public sealed class QueryPackageExecuteHandler : ICommandHandler
         }
 
         var classification = _classifier.Classify(sqlRequest.Sql);
-        if (classification != QueryClassification.Read || QueryClassifier.ContainsForbiddenDataChange(sqlRequest.Sql))
+        if (!IsReadOnlyPackageSql(sqlRequest.Sql, classification))
         {
             return BridgeResponseBuilder.Failure(command, ErrorCodes.SqlPermissionDenied, "حزمة الاستعلام ليست قراءة فقط.");
         }
@@ -211,5 +238,19 @@ public sealed class QueryPackageExecuteHandler : ICommandHandler
 
         error = null;
         return true;
+    }
+
+    private static bool IsReadOnlyPackageSql(string sql, QueryClassification classification)
+    {
+        // Keep the bridge contract aligned with bridge-query-publish: packages
+        // are SELECT/WITH only. General sql.execute remains a separate,
+        // backwards-compatible transport for legacy callers.
+        var firstKeyword = QueryClassifier.ExtractFirstKeyword(sql);
+        return (string.Equals(firstKeyword, "SELECT", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(firstKeyword, "WITH", StringComparison.OrdinalIgnoreCase)) &&
+               classification == QueryClassification.Read &&
+               !QueryClassifier.ContainsForbiddenDataChange(sql) &&
+               !QueryClassifier.ContainsPermanentSchemaChange(sql) &&
+               !QueryClassifier.ContainsStoredProcedureExecution(sql);
     }
 }

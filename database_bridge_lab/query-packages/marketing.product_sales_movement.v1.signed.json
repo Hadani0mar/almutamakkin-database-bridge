@@ -1,0 +1,35 @@
+{
+  "definition": {
+    "QueryId": "marketing.product_sales_movement.v1",
+    "Version": 1,
+    "System": "marketing",
+    "DatabaseProfile": "Marketing",
+    "Sql": "WITH Combined AS (\n    SELECT\n        CASE @granularity\n            WHEN N\u0027daily\u0027 THEN CONVERT(VARCHAR(10), S_DATE, 120)\n            WHEN N\u0027monthly\u0027 THEN CONVERT(VARCHAR(7), S_DATE, 120) \u002B \u0027-01\u0027\n            WHEN N\u0027yearly\u0027 THEN CONVERT(VARCHAR(4), S_DATE, 120) \u002B \u0027-01-01\u0027\n        END AS periodStart,\n        SUM(QTY) AS soldBaseQuantity,\n        SUM(((((PRICE * QTY) \u002B (ISNULL(COLOR_PRICE, 0) * QTY)) - ((((PRICE * QTY) \u002B (ISNULL(COLOR_PRICE, 0) * QTY)) * ISNULL(S_DISCOUNT, 0) / 100)) \u002B ((((PRICE * QTY) \u002B (ISNULL(COLOR_PRICE, 0) * QTY)) - ((((PRICE * QTY) \u002B (ISNULL(COLOR_PRICE, 0) * QTY)) * ISNULL(S_DISCOUNT, 0) / 100))) * ISNULL(S_TAX1, 0) / 100) \u002B (((((PRICE * QTY) \u002B (ISNULL(COLOR_PRICE, 0) * QTY)) - ((((PRICE * QTY) \u002B (ISNULL(COLOR_PRICE, 0) * QTY)) * ISNULL(S_DISCOUNT, 0) / 100)) \u002B ((((PRICE * QTY) \u002B (ISNULL(COLOR_PRICE, 0) * QTY)) - ((((PRICE * QTY) \u002B (ISNULL(COLOR_PRICE, 0) * QTY)) * ISNULL(S_DISCOUNT, 0) / 100))) * ISNULL(S_TAX1, 0) / 100)) * ISNULL(S_TAX2, 0) / 100))) AS netAmount,\n        SUM(((PRICE * QTY) \u002B (ISNULL(COLOR_PRICE, 0) * QTY)) * ISNULL(S_DISCOUNT, 0) / 100) AS discountAmount,\n        COUNT(DISTINCT S_ID) AS invoiceCount\n    FROM SALE_ITEMS_INVOICE_VIEW\n    WHERE ITEM_ID = @productId\n      AND S_STATUES NOT IN (0, 2)\n      AND S_DATE \u003E= @startDate\n      AND S_DATE \u003C DATEADD(day, 1, @endDate)\n    GROUP BY CASE @granularity\n        WHEN N\u0027daily\u0027 THEN CONVERT(VARCHAR(10), S_DATE, 120)\n        WHEN N\u0027monthly\u0027 THEN CONVERT(VARCHAR(7), S_DATE, 120) \u002B \u0027-01\u0027\n        WHEN N\u0027yearly\u0027 THEN CONVERT(VARCHAR(4), S_DATE, 120) \u002B \u0027-01-01\u0027\n    END\n\n    UNION ALL\n\n    SELECT\n        CASE @granularity\n            WHEN N\u0027daily\u0027 THEN CONVERT(VARCHAR(10), S_R_DATE, 120)\n            WHEN N\u0027monthly\u0027 THEN CONVERT(VARCHAR(7), S_R_DATE, 120) \u002B \u0027-01\u0027\n            WHEN N\u0027yearly\u0027 THEN CONVERT(VARCHAR(4), S_R_DATE, 120) \u002B \u0027-01-01\u0027\n        END AS periodStart,\n        -SUM(QTY) AS soldBaseQuantity,\n        -SUM(PRICE * QTY) AS netAmount,\n        CAST(0 AS DECIMAL(18, 4)) AS discountAmount,\n        CAST(0 AS INT) AS invoiceCount\n    FROM R_S_ITEMS_INVOICE_VIEW\n    WHERE ITEM_ID = @productId\n      AND S_R_STATUES NOT IN (0, 2)\n      AND S_R_DATE \u003E= @startDate\n      AND S_R_DATE \u003C DATEADD(day, 1, @endDate)\n    GROUP BY CASE @granularity\n        WHEN N\u0027daily\u0027 THEN CONVERT(VARCHAR(10), S_R_DATE, 120)\n        WHEN N\u0027monthly\u0027 THEN CONVERT(VARCHAR(7), S_R_DATE, 120) \u002B \u0027-01\u0027\n        WHEN N\u0027yearly\u0027 THEN CONVERT(VARCHAR(4), S_R_DATE, 120) \u002B \u0027-01-01\u0027\n    END\n)\nSELECT\n    periodStart,\n    periodStart AS periodEnd,\n    SUM(soldBaseQuantity) AS soldBaseQuantity,\n    SUM(netAmount) AS netAmount,\n    SUM(discountAmount) AS discountAmount,\n    SUM(invoiceCount) AS invoiceCount\nFROM Combined\nWHERE periodStart IS NOT NULL\nGROUP BY periodStart\nORDER BY periodStart ASC;",
+    "Parameters": [
+      {
+        "Name": "productId",
+        "Type": "int",
+        "Required": true
+      },
+      {
+        "Name": "startDate",
+        "Type": "datetime",
+        "Required": true
+      },
+      {
+        "Name": "endDate",
+        "Type": "datetime",
+        "Required": true
+      },
+      {
+        "Name": "granularity",
+        "Type": "string",
+        "Required": true
+      }
+    ],
+    "TimeoutSeconds": 30,
+    "MaxRows": 1200
+  },
+  "keyId": "amkq-2026-07-28",
+  "signatureBase64": "pX0jrZWT/ZjPmyAZ9pl42efel3huA4GFzjz6v/5W2pnUnb47Gx1OMNnbah01t\u002Bokdg5XdjqODW4qVCtwSdpO7XZVeZYolIBZfLuLkSqtwfxHFW5OCJpS1rgoSAzY95tBnuGIkKvcnzXi1SpW1jw\u002BX2cOOwF6PslaOfMUWUTkw7wCYQJQxWijZhVFbZ2iRfmAXhE0gPxMWa26kKyH0q6Wysz7jz3GqlJdTXlwm4e13h8v4lLnBcwXlRdVc7hTCrz2u985BwHSe/g6WUWHrU3iuVpWVVdFnD4jf4qWiIbYuXCEqnO9vcJvha\u002B3dw/0wqtGVPfR2T8JbkJQmwl5UM/1zoEFT49axOdQ92GiFfWn2kaiFQSVQ/eMbNclEuA/e0q59JqukjwKhjPr/6o98CB\u002Bv1SInmXlKxlhQQWujyM7u0eej2JYRgm7argXyJk/sTODbpsLfcm0\u002BV0STkbDQzlWQqORbYyGRfu4wQ06oFJLKvTIm1iM7E/KF/Agfy2Dty3g"
+}

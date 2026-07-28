@@ -46,7 +46,7 @@ public sealed class SqlExecuteHandlerProfileIsolationTests
     }
 
     [Fact]
-    public async Task HandleAsync_RoutesCanonicalRequestToExplicitlySelectedNetworkProfile()
+    public async Task HandleAsync_UsesTheExplicitlySelectedNetworkProfile()
     {
         var executor = new RecordingExecutor();
         var handler = CreateHandler(
@@ -65,7 +65,7 @@ public sealed class SqlExecuteHandlerProfileIsolationTests
     }
 
     [Fact]
-    public async Task HandleAsync_RoutesAnotherSystemToItsUniqueEnabledProfile()
+    public async Task HandleAsync_RejectsAnotherSystemWhenMarketingIsSelected()
     {
         var executor = new RecordingExecutor();
         var handler = CreateHandler(
@@ -79,12 +79,12 @@ public sealed class SqlExecuteHandlerProfileIsolationTests
 
         var response = await handler.HandleAsync(Command("InfinityRetailDB"), CancellationToken.None);
 
-        Assert.True(response.Success);
-        Assert.Equal("InfinityRetailDB", executor.Profile!.DatabaseName);
+        Assert.False(response.Success);
+        Assert.Null(executor.Profile);
     }
 
     [Fact]
-    public async Task HandleAsync_RoutesAnotherSystemUsingTheSelectedNetworkConnectionKind()
+    public async Task HandleAsync_RejectsAnotherSystemEvenWhenItHasTheSameConnectionKind()
     {
         var executor = new RecordingExecutor();
         var handler = CreateHandler(
@@ -100,13 +100,12 @@ public sealed class SqlExecuteHandlerProfileIsolationTests
 
         var response = await handler.HandleAsync(Command("InfinityRetailDB"), CancellationToken.None);
 
-        Assert.True(response.Success);
-        Assert.Equal("remote-sql", executor.Profile!.ServerName);
-        Assert.Equal("InfinityRetailDB", executor.Profile.DatabaseName);
+        Assert.False(response.Success);
+        Assert.Null(executor.Profile);
     }
 
     [Fact]
-    public async Task HandleAsync_RecoversFromStaleActiveSelectionUsingOnlyUniqueRequestedSystemProfile()
+    public async Task HandleAsync_RejectsStaleActiveSelectionInsteadOfFallingBack()
     {
         var executor = new RecordingExecutor();
         var handler = CreateHandler(
@@ -120,10 +119,8 @@ public sealed class SqlExecuteHandlerProfileIsolationTests
 
         var response = await handler.HandleAsync(Command("InfinityRetailDB"), CancellationToken.None);
 
-        Assert.True(response.Success);
-        Assert.NotNull(executor.Profile);
-        Assert.Equal("InfinityRetailDB", executor.Profile!.DatabaseName);
-        Assert.Equal("remote-sql", executor.Profile.ServerName);
+        Assert.False(response.Success);
+        Assert.Null(executor.Profile);
     }
 
     [Fact]
