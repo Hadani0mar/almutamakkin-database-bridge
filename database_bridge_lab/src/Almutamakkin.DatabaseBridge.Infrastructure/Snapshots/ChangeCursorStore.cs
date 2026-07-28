@@ -1,3 +1,4 @@
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using Almutamakkin.DatabaseBridge.Core;
 using Almutamakkin.DatabaseBridge.Protocol;
@@ -71,9 +72,17 @@ public sealed class JsonChangeCursorStore : IChangeCursorStore
             return new Dictionary<string, ChangeCursorRecord>(StringComparer.OrdinalIgnoreCase);
         }
 
-        var document = BridgeJson.Deserialize<ChangeCursorDocument>(json);
-        return document?.Records ??
-               new Dictionary<string, ChangeCursorRecord>(StringComparer.OrdinalIgnoreCase);
+        try
+        {
+            var document = BridgeJson.Deserialize<ChangeCursorDocument>(json);
+            return document?.Records ??
+                   new Dictionary<string, ChangeCursorRecord>(StringComparer.OrdinalIgnoreCase);
+        }
+        catch (JsonException)
+        {
+            PreserveCorruptedFile();
+            return new Dictionary<string, ChangeCursorRecord>(StringComparer.OrdinalIgnoreCase);
+        }
     }
 
     private static void SaveToDisk(Dictionary<string, ChangeCursorRecord> records)
@@ -81,6 +90,21 @@ public sealed class JsonChangeCursorStore : IChangeCursorStore
         LabPaths.EnsureLocalAppDataRoot();
         var document = new ChangeCursorDocument { Records = records };
         File.WriteAllText(LabPaths.ChangeCursorsFilePath, BridgeJson.Serialize(document));
+    }
+
+    private static void PreserveCorruptedFile()
+    {
+        try
+        {
+            var backupPath = Path.Combine(
+                LabPaths.LocalAppDataRoot,
+                $"change-cursors.corrupt-{DateTime.UtcNow:yyyyMMddHHmmss}.json");
+            File.Copy(LabPaths.ChangeCursorsFilePath, backupPath, overwrite: false);
+        }
+        catch
+        {
+            // Recovery must not be blocked when a diagnostic backup cannot be written.
+        }
     }
 
     private static ChangeCursorRecord Clone(ChangeCursorRecord source) =>

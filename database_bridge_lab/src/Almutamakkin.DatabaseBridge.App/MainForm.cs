@@ -24,10 +24,10 @@ public sealed class MainForm : Form
     private readonly IServiceProvider _serviceProvider;
     private readonly Button _updateButton = new()
     {
-        Text = "تحديث متاح",
+        Text = "التحديثات",
         Width = 124,
         Height = 40,
-        Visible = false,
+        Visible = true,
         BackColor = Color.FromArgb(12, 144, 128),
         ForeColor = Color.White,
         FlatStyle = FlatStyle.Flat,
@@ -230,7 +230,7 @@ public sealed class MainForm : Form
     private ICommandTransport? _activeTransport;
     private bool _bridgeRunning;
     private string? _lastDatabaseTestSummary;
-    private Uri? _availableUpdateUri;
+    private Uri _availableUpdateUri = GitHubReleaseUpdateChecker.ReleasesPageUri;
 
     public MainForm(
         AppSettings settings,
@@ -284,12 +284,12 @@ public sealed class MainForm : Form
             var update = await _updateChecker.GetLatestAsync(installedVersion, cancellation.Token);
             if (update is null)
             {
+                _updateButton.Text = "التحديثات";
                 return;
             }
 
             _availableUpdateUri = update.ReleasePageUri;
             _updateButton.Text = $"تحديث {update.Version}";
-            _updateButton.Visible = true;
             _updateNotifyIcon.BalloonTipTitle = "تحديث جديد لجسر المتمكن";
             _updateNotifyIcon.BalloonTipText = $"الإصدار {update.Version} متاح. اضغط هنا لفتح صفحة التنزيل.";
             _updateNotifyIcon.BalloonTipClicked += (_, _) =>
@@ -655,11 +655,6 @@ public sealed class MainForm : Form
 
     private void OpenAvailableUpdatePage()
     {
-        if (_availableUpdateUri is null)
-        {
-            return;
-        }
-
         try
         {
             System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo(_availableUpdateUri.AbsoluteUri)

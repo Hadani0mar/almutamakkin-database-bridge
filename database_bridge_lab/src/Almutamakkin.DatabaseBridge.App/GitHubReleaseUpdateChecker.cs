@@ -10,6 +10,7 @@ namespace Almutamakkin.DatabaseBridge.App;
 public sealed class GitHubReleaseUpdateChecker
 {
     private const string ReleasesApi = "https://api.github.com/repos/Hadani0mar/almutamakkin-database-bridge/releases/latest";
+    public static readonly Uri ReleasesPageUri = new("https://github.com/Hadani0mar/almutamakkin-database-bridge/releases");
 
     private readonly HttpClient _httpClient;
 
